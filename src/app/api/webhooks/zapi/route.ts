@@ -3,15 +3,6 @@ import { waitUntil } from "@vercel/functions";
 import { handleIncomingMessage } from "@/services/bot.service";
 
 export async function POST(req: NextRequest) {
-  // Validate Z-API client token
-  const clientToken = req.headers.get("client-token");
-  if (
-    process.env.ZAPI_CLIENT_TOKEN &&
-    clientToken !== process.env.ZAPI_CLIENT_TOKEN
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   let payload: ZApiWebhookPayload;
   try {
     payload = await req.json();
