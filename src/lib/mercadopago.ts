@@ -50,7 +50,7 @@ export async function createPreference(plan: PlanType, pendingId: string, reques
       auto_return: "approved",
 
       // Webhook do MP
-      notification_url: process.env.MP_NOTIFICATION_URL!,
+      notification_url: `${appUrl}/api/webhooks/mercadopago`,
 
       // Metadata extra
       metadata: { plan, pendingId },
