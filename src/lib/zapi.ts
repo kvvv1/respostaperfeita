@@ -9,7 +9,10 @@ function zapiUrl(path: string) {
 async function zapiPost(path: string, body: object) {
   const res = await fetch(zapiUrl(path), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Client-Token": process.env.ZAPI_CLIENT_TOKEN ?? "",
+    },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
