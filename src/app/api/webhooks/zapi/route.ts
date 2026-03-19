@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { handleIncomingMessage } from "@/services/bot.service";
 
 export async function POST(req: NextRequest) {
@@ -33,10 +34,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Process asynchronously to avoid Z-API timeout
-  handleIncomingMessage(phone, messageText, messageId).catch((err) => {
-    console.error("Bot handler error:", err);
-  });
+  // waitUntil keeps the function alive after response is sent (Vercel Hobby fix)
+  waitUntil(
+    handleIncomingMessage(phone, messageText, messageId).catch((err) => {
+      console.error("Bot handler error:", err);
+    })
+  );
 
   return NextResponse.json({ ok: true });
 }
