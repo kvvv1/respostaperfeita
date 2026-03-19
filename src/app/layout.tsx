@@ -9,6 +9,11 @@ export const metadata: Metadata = {
   description:
     "IA que sugere respostas prontas pra qualquer conversa. Paquera, trabalho ou conflito. Ative em 2 minutos por R$ 9,90.",
   keywords: "whatsapp, resposta, ia, inteligência artificial, paquera, relacionamento",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
   openGraph: {
     title: "Resposta Perfeita — Nunca mais trave em uma conversa",
     description: "IA que sugere respostas prontas pra qualquer conversa. Ative agora por R$ 9,90.",
