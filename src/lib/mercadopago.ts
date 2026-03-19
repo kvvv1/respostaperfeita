@@ -18,9 +18,9 @@ export const PLANS = {
 export type PlanType = keyof typeof PLANS;
 
 // ─── Create preference ────────────────────────────────────────────────────────
-export async function createPreference(plan: PlanType, pendingId: string) {
+export async function createPreference(plan: PlanType, pendingId: string, requestOrigin?: string) {
   const planData = PLANS[plan];
-  const appUrl   = process.env.NEXT_PUBLIC_APP_URL!;
+  const appUrl   = requestOrigin ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://www.respostaperfeita.com";
   const client   = getClient();
   const pref     = new Preference(client);
 

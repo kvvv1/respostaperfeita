@@ -1,4 +1,5 @@
 import { db } from "@/lib/supabase";
+import { buildUpsellLink } from "@/lib/whatsapp";
 import { sendTextMessage } from "@/lib/zapi";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
@@ -13,7 +14,7 @@ export async function sendWelcomeMessage(phone: string, plan: string) {
 
   await sendTextMessage(
     phone,
-    `✅ *Acesso ativado com sucesso!*\n\nSeu plano: *${duration}*\n\nBoa 👀\nMe manda a mensagem ou descreva a situação que eu te ajudo a responder do jeito certo!\n\n_Dica: pode colar aqui a mensagem exata que você recebeu._`
+    `Acesso ativado com sucesso!\n\nSeu plano: ${duration}\n\nMe manda a mensagem ou descreva a situacao que eu te ajudo a responder do jeito certo.\n\nDica: pode colar aqui a mensagem exata que voce recebeu.`
   );
 }
 
@@ -22,7 +23,6 @@ export async function checkExpiringSubscriptions() {
   const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000);
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
-  // Subscriptions expiring in the next 2 hours, not yet notified
   const { data: expiring } = await db
     .from("Subscription")
     .select("id, userId, expiresAt, User(phone)")
@@ -35,10 +35,13 @@ export async function checkExpiringSubscriptions() {
   for (const sub of expiring ?? []) {
     const phone = (sub.User as { phone?: string } | null)?.phone;
     if (!phone) continue;
+
+    const upsellLink = buildUpsellLink(APP_URL, phone);
+
     try {
       await sendTextMessage(
         phone,
-        `⚠️ *Seu acesso está acabando em breve!*\n\nNão perca o fio das suas conversas — continue usando sem interrupção 👇\n\n${APP_URL}/upsell`
+        `Seu acesso esta acabando em breve!\n\nNao perca o fio das suas conversas. Continue usando sem interrupcao:\n\n${upsellLink}`
       );
       await db
         .from("Subscription")
@@ -50,7 +53,6 @@ export async function checkExpiringSubscriptions() {
     }
   }
 
-  // Subscriptions that just expired (within last 1 hour) — mark expired + send message
   const { data: recentlyExpired } = await db
     .from("Subscription")
     .select("id, userId, User(phone)")
@@ -61,6 +63,8 @@ export async function checkExpiringSubscriptions() {
   let expiredCount = 0;
   for (const sub of recentlyExpired ?? []) {
     const phone = (sub.User as { phone?: string } | null)?.phone;
+    const upsellLink = phone ? buildUpsellLink(APP_URL, phone) : APP_URL;
+
     try {
       await db
         .from("Subscription")
@@ -70,7 +74,7 @@ export async function checkExpiringSubscriptions() {
       if (phone) {
         await sendTextMessage(
           phone,
-          `Seu acesso expirou 😕\n\nMas você pode continuar usando agora mesmo!\n\n👉 Ative aqui: ${APP_URL}`
+          `Seu acesso expirou.\n\nMas voce pode continuar usando agora mesmo:\n\nAtive aqui: ${upsellLink}`
         );
       }
       expiredCount++;

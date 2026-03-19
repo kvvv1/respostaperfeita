@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { buildWhatsAppLink, getBotPhone } from "@/lib/whatsapp";
 
 function SucessoContent() {
   const searchParams = useSearchParams();
@@ -13,8 +14,10 @@ function SucessoContent() {
     MONTH_30D: "30 dias",
   };
 
-  const botPhone = process.env.NEXT_PUBLIC_BOT_PHONE || "5511999998888";
-  const whatsappLink = `https://wa.me/${botPhone}?text=Oi%2C%20quero%20usar%20o%20Resposta%20Perfeita!`;
+  const whatsappLink = buildWhatsAppLink(
+    getBotPhone(),
+    "Oi, quero usar o Resposta Perfeita!"
+  );
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">

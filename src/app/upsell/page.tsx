@@ -2,12 +2,13 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { buildWhatsAppLink, getBotPhone } from "@/lib/whatsapp";
 
 function UpsellContent() {
   const [loading, setLoading] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+  const [phone, setPhone] = useState("");
   const searchParams = useSearchParams();
-  const phone = searchParams.get("phone") || "";
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -16,32 +17,59 @@ function UpsellContent() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const queryPhone = searchParams.get("phone") || "";
+
+    if (queryPhone) {
+      sessionStorage.setItem("upsellPhone", queryPhone);
+      setPhone(queryPhone);
+      return;
+    }
+
+    const storedPhone = sessionStorage.getItem("upsellPhone") || "";
+    if (storedPhone) {
+      setPhone(storedPhone);
+    }
+  }, [searchParams]);
+
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
 
   async function handleUpgrade(plan: "WEEK_7D" | "MONTH_30D") {
+    if (!phone) {
+      alert("Nao encontramos seu WhatsApp. Abra novamente o link de renovacao que enviamos para voce.");
+      return;
+    }
+
     setLoading(plan);
+
     try {
       const res = await fetch("/api/checkout/upsell", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan, phone }),
       });
+
+      if (!res.ok) {
+        throw new Error("Checkout upsell failed");
+      }
+
       const data = await res.json();
 
-      if (data.initPoint) {
-        window.location.href = data.initPoint;
+      if (!data.initPoint) {
+        throw new Error("Missing checkout URL");
       }
+
+      window.location.href = data.initPoint;
     } catch {
-      alert("Erro. Tente novamente.");
+      alert("Nao foi possivel iniciar a compra. Tente novamente em alguns instantes.");
     } finally {
       setLoading(null);
     }
   }
 
   function skipToBot() {
-    const botPhone = process.env.NEXT_PUBLIC_BOT_PHONE || "5511999998888";
-    window.open(`https://wa.me/${botPhone}`, "_blank");
+    window.open(buildWhatsAppLink(getBotPhone()), "_blank");
   }
 
   return (

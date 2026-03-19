@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
 
     if (error) throw new Error(error.message);
 
-    const preference = await createPreference(plan, pending!.id);
+    const origin = req.headers.get("origin") ?? req.headers.get("referer")?.replace(/\/[^/]*$/, "") ?? undefined;
+    const preference = await createPreference(plan, pending!.id, origin);
 
     return NextResponse.json({
       preferenceId: preference.id,
