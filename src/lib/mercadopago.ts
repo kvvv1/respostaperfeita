@@ -55,9 +55,11 @@ export async function createPreference(plan: PlanType, pendingId: string) {
       // Metadata extra
       metadata: { plan, pendingId },
 
-      // Só 1x sem parcelas (produto digital)
+      // PIX + cartão, sem parcelas (produto digital)
       payment_methods: {
         installments: 1,
+        default_payment_method_id: "pix",
+        excluded_payment_types: [],
       },
 
       // Expirar após 30 min de inatividade
