@@ -3,7 +3,7 @@ const INSTANCE_ID = process.env.ZAPI_INSTANCE_ID!;
 const TOKEN = process.env.ZAPI_TOKEN!;
 
 function zapiUrl(path: string) {
-  return `${ZAPI_BASE}/${INSTANCE_ID}/token/${TOKEN}${path}`;
+  return `${ZAPI_BASE}/instances/${INSTANCE_ID}/token/${TOKEN}${path}`;
 }
 
 async function zapiPost(path: string, body: object) {
