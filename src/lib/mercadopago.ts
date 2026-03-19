@@ -1,59 +1,108 @@
 import MercadoPagoConfig, { Payment, Preference } from "mercadopago";
+import crypto from "crypto";
 
-const client = new MercadoPagoConfig({
-  accessToken: process.env.MP_ACCESS_TOKEN!,
-});
+// ─── SDK client ───────────────────────────────────────────────────────────────
+function getClient() {
+  const token = process.env.MP_ACCESS_TOKEN;
+  if (!token) throw new Error("MP_ACCESS_TOKEN não configurado");
+  return new MercadoPagoConfig({ accessToken: token });
+}
 
-export const mpPreference = new Preference(client);
-export const mpPayment = new Payment(client);
-
+// ─── Plans ────────────────────────────────────────────────────────────────────
 export const PLANS = {
-  TRIAL_24H: { label: "Acesso 24h", price: 9.9, durationHours: 24 },
-  WEEK_7D: { label: "Acesso 7 dias", price: 19.9, durationHours: 168 },
-  MONTH_30D: { label: "Acesso 30 dias", price: 39.9, durationHours: 720 },
+  TRIAL_24H: { label: "Acesso 24 horas", price: 9.9,  durationHours: 24  },
+  WEEK_7D:   { label: "Acesso 7 dias",   price: 19.9, durationHours: 168 },
+  MONTH_30D: { label: "Acesso 30 dias",  price: 39.9, durationHours: 720 },
 } as const;
 
 export type PlanType = keyof typeof PLANS;
 
-export async function createPreference(
-  plan: PlanType,
-  preferenceId?: string
-) {
+// ─── Create preference ────────────────────────────────────────────────────────
+export async function createPreference(plan: PlanType, pendingId: string) {
   const planData = PLANS[plan];
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+  const appUrl   = process.env.NEXT_PUBLIC_APP_URL!;
+  const client   = getClient();
+  const pref     = new Preference(client);
 
-  const preference = await mpPreference.create({
+  const result = await pref.create({
     body: {
+      // Item
       items: [
         {
-          id: plan,
-          title: `Resposta Perfeita - ${planData.label}`,
+          id:          plan,
+          title:       `Resposta Perfeita — ${planData.label}`,
           description: "Assistente de respostas para WhatsApp com IA",
-          quantity: 1,
-          unit_price: planData.price,
+          quantity:    1,
+          unit_price:  planData.price,
           currency_id: "BRL",
         },
       ],
+
+      // CRITICAL: pendingId em external_reference → disponível no webhook
+      external_reference: pendingId,
+
+      // Redirect URLs — pendingId vai na query para a página saber o pedido
       back_urls: {
-        success: `${appUrl}/obrigado?plan=${plan}`,
+        success: `${appUrl}/obrigado?pendingId=${pendingId}&plan=${plan}`,
         failure: `${appUrl}/?erro=pagamento`,
-        pending: `${appUrl}/obrigado?plan=${plan}&pending=true`,
+        pending: `${appUrl}/obrigado?pendingId=${pendingId}&plan=${plan}&status=pending`,
       },
+      auto_return: "approved",
+
+      // Webhook do MP
       notification_url: process.env.MP_NOTIFICATION_URL!,
-      metadata: {
-        plan,
-        pendingId: preferenceId,
-      },
+
+      // Metadata extra
+      metadata: { plan, pendingId },
+
+      // Só 1x sem parcelas (produto digital)
       payment_methods: {
-        excluded_payment_types: [],
         installments: 1,
       },
+
+      // Expirar após 30 min de inatividade
+      expires:    true,
+      expiration_date_from: new Date().toISOString(),
+      expiration_date_to:   new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     },
   });
 
-  return preference;
+  return result;
 }
 
+// ─── Get payment details ──────────────────────────────────────────────────────
 export async function getPaymentById(paymentId: string) {
-  return mpPayment.get({ id: paymentId });
+  const client  = getClient();
+  const payment = new Payment(client);
+  return payment.get({ id: paymentId });
+}
+
+// ─── Webhook signature validation ────────────────────────────────────────────
+// https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks
+export function validateWebhookSignature(
+  xSignature: string,
+  xRequestId: string,
+  dataId: string
+): boolean {
+  const secret = process.env.MP_WEBHOOK_SECRET;
+  if (!secret) return true; // Skip in dev when secret not set
+
+  // Format: ts=...,v1=...
+  const parts = Object.fromEntries(
+    xSignature.split(",").map((p) => p.split("=") as [string, string])
+  );
+
+  const ts = parts["ts"];
+  const v1 = parts["v1"];
+  if (!ts || !v1) return false;
+
+  // Manifest string as per MP docs
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+
+  const hash = crypto
+    .createHmac("sha256", secret)
+    .update(manifest)
+    .digest("hex");
+
+  return hash === v1;
 }
