@@ -18,22 +18,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Ignore status updates, group messages, and outbound messages
-  if (
-    payload.type !== "ReceivedCallback" &&
-    payload.type !== "received" &&
-    !payload.isStatusReply
-  ) {
-    return NextResponse.json({ ok: true });
-  }
-
-  if (payload.isGroup || payload.fromMe) {
+  // Ignore outbound messages and group messages
+  if (payload.fromMe || payload.isGroup || payload.isStatusReply) {
     return NextResponse.json({ ok: true });
   }
 
   const phone = payload.phone || payload.from?.replace("@s.whatsapp.net", "");
   const messageText = payload.text?.message || payload.body || "";
   const messageId = payload.messageId || payload.id;
+
+  console.log("ZAPI payload type:", payload.type, "phone:", phone, "text:", messageText?.slice(0, 50));
 
   if (!phone || !messageText) {
     return NextResponse.json({ ok: true });
