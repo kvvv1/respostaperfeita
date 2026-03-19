@@ -285,7 +285,7 @@ export default function LandingPage() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/25 rounded-full px-4 py-1.5 text-green-400 text-sm font-medium mb-8 fade-up">
               <span className="w-2 h-2 bg-green-400 rounded-full blink" />
-              Bot online agora · +1.200 usuários ativos
+              Bot online agora · +3.800 pessoas usando agora
             </div>
 
             {/* Headline */}
@@ -328,7 +328,12 @@ export default function LandingPage() {
         <div className="border-y border-white/5 bg-[var(--bg-card)] py-4 px-4">
           <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-zinc-400">
             <span className="flex items-center gap-2">
-              <span className="text-green-400 font-bold">1.200+</span> usuários ativos
+              <span className="w-2 h-2 bg-green-400 rounded-full blink" />
+              <span className="text-green-400 font-bold">3.847</span> usando agora
+            </span>
+            <span className="hidden sm:block w-px h-4 bg-zinc-700" />
+            <span className="flex items-center gap-2">
+              <span className="text-green-400 font-bold">+12.000</span> conversas respondidas hoje
             </span>
             <span className="hidden sm:block w-px h-4 bg-zinc-700" />
             <span className="flex items-center gap-2">
@@ -338,8 +343,6 @@ export default function LandingPage() {
             <span className="flex items-center gap-2">
               <span className="text-green-400 font-bold">98%</span> recomendam
             </span>
-            <span className="hidden sm:block w-px h-4 bg-zinc-700" />
-            <span>Pagamento seguro via Mercado Pago</span>
           </div>
         </div>
 

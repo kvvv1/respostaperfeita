@@ -99,12 +99,52 @@ function UpsellContent() {
 
         {/* Plans */}
         <div className="space-y-4 mb-8">
+          {/* 30 days — highlight FIRST */}
+          <div className="bg-zinc-900 border-2 border-green-500 rounded-2xl p-6 relative">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-black text-xs font-black px-4 py-1 rounded-full">
+              🔥 MELHOR ESCOLHA
+            </div>
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h2 className="text-xl font-black">Plano 30 dias</h2>
+                <p className="text-zinc-400 text-sm mt-1">Nunca mais trave em nenhuma conversa</p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-black text-green-400">R$ 39,90</p>
+              </div>
+            </div>
+
+            {/* Price per day highlight */}
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 mb-4 text-center">
+              <p className="text-green-400 font-black text-lg">menos de R$ 1,35 por dia</p>
+              <p className="text-zinc-400 text-xs mt-0.5">menos que um café ☕ — por 30 dias completos</p>
+            </div>
+
+            <div className="flex flex-col gap-2 mb-4">
+              {[
+                "✔ 30 dias de acesso ilimitado",
+                "✔ Qualquer contexto: amor, trabalho, conflito",
+                "✔ Histórico de conversas preservado",
+                "✔ Respostas em menos de 5 segundos",
+              ].map((b, i) => (
+                <p key={i} className="text-zinc-300 text-sm">{b}</p>
+              ))}
+            </div>
+            <button
+              onClick={() => handleUpgrade("MONTH_30D")}
+              disabled={loading !== null}
+              className="btn-pulse w-full bg-green-500 hover:bg-green-400 text-black font-black text-lg py-4 rounded-xl transition-all disabled:opacity-50"
+            >
+              {loading === "MONTH_30D" ? "Aguarde..." : "Quero 30 dias por R$ 39,90 →"}
+            </button>
+          </div>
+
           {/* 7 days */}
           <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h2 className="text-xl font-black">🔹 Plano 7 dias</h2>
-                <p className="text-zinc-400 text-sm mt-1">Use o assistente todos os dias</p>
+                <h2 className="text-xl font-black">Plano 7 dias</h2>
+                <p className="text-zinc-400 text-sm mt-1">Experimente por uma semana</p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-black text-white">R$ 19,90</p>
@@ -117,39 +157,6 @@ function UpsellContent() {
               className="w-full bg-zinc-700 hover:bg-zinc-600 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50"
             >
               {loading === "WEEK_7D" ? "Aguarde..." : "Quero 7 dias →"}
-            </button>
-          </div>
-
-          {/* 30 days — highlight */}
-          <div className="bg-zinc-900 border-2 border-green-500 rounded-2xl p-6 relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-black text-xs font-black px-4 py-1 rounded-full">
-              MAIS POPULAR
-            </div>
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h2 className="text-xl font-black">🔥 Plano 30 dias</h2>
-                <p className="text-zinc-400 text-sm mt-1">Nunca mais trave em nenhuma conversa</p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-black text-green-400">R$ 39,90</p>
-                <p className="text-zinc-500 text-xs">≈ R$ 1,33/dia</p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2 mb-4">
-              {[
-                "✔ 30 dias de acesso ilimitado",
-                "✔ Até 1000 mensagens por dia",
-                "✔ Qualquer contexto: amor, trabalho, conflito",
-              ].map((b, i) => (
-                <p key={i} className="text-zinc-300 text-sm">{b}</p>
-              ))}
-            </div>
-            <button
-              onClick={() => handleUpgrade("MONTH_30D")}
-              disabled={loading !== null}
-              className="btn-pulse w-full bg-green-500 hover:bg-green-400 text-black font-black text-lg py-4 rounded-xl transition-all disabled:opacity-50"
-            >
-              {loading === "MONTH_30D" ? "Aguarde..." : "Quero acesso completo →"}
             </button>
           </div>
         </div>
