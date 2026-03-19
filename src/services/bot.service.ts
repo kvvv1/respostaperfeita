@@ -178,7 +178,7 @@ export async function handleIncomingMessage(
     setTimeout(async () => {
       await sendTextMessage(
         formattedPhone,
-        `⚠️ Seu acesso expira em menos de 2 horas!\n\nNão perca — renove agora e continue usando:\n${upsellLink}`
+        `⚠️ *Atenção: seu acesso expira em menos de 2 horas!*\n\nAinda tem conversas para resolver? Renove agora e não perde o ritmo:\n\n${upsellLink}\n\n_7 dias por R$ 19,90 · 30 dias por R$ 39,90_`
       );
     }, 3000);
   }

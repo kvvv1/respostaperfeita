@@ -41,7 +41,7 @@ export async function checkExpiringSubscriptions() {
     try {
       await sendTextMessage(
         phone,
-        `Seu acesso esta acabando em breve!\n\nNao perca o fio das suas conversas. Continue usando sem interrupcao:\n\n${upsellLink}`
+        `⏰ *Seu acesso expira em menos de 2 horas!*\n\nVocê ainda tem conversas para resolver? Não deixa travar agora.\n\n👇 Renove em 1 minuto e continue de onde parou:\n${upsellLink}\n\n_7 dias por R$ 19,90 ou 30 dias por R$ 39,90_`
       );
       await db
         .from("Subscription")
@@ -74,7 +74,7 @@ export async function checkExpiringSubscriptions() {
       if (phone) {
         await sendTextMessage(
           phone,
-          `Seu acesso expirou.\n\nMas voce pode continuar usando agora mesmo:\n\nAtive aqui: ${upsellLink}`
+          `😕 *Seu acesso expirou.*\n\nSei que ainda tem conversas que precisam de resposta — acontece com todo mundo.\n\nA boa notícia: você pode reativar agora e continuar na hora.\n\n👇 Escolha seu plano:\n${upsellLink}\n\n✅ *7 dias — R$ 19,90* (menos de R$ 3 por dia)\n✅ *30 dias — R$ 39,90* (menos de R$ 1,35 por dia)`
         );
       }
       expiredCount++;
