@@ -1,23 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
+import { jwtVerify } from "jose";
 
-export function middleware(req: NextRequest) {
+const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? "fallback");
+
+async function isValidToken(token: string): Promise<boolean> {
+  try {
+    await jwtVerify(token, secret);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Protect dashboard routes
   if (pathname.startsWith("/dashboard")) {
     const token = req.cookies.get("auth_token")?.value;
-
-    if (!token || !verifyToken(token)) {
+    if (!token || !(await isValidToken(token))) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
   }
 
-  // Protect dashboard API routes
   if (pathname.startsWith("/api/dashboard")) {
     const token = req.cookies.get("auth_token")?.value;
-
-    if (!token || !verifyToken(token)) {
+    if (!token || !(await isValidToken(token))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
