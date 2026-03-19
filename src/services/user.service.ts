@@ -94,5 +94,23 @@ export async function getUserByPhone(phone: string) {
     .eq("phone", formattedPhone)
     .single();
 
-  return user;
+  if (user) return user;
+
+  // Try adding/removing the 9th digit (Brazilian mobile number format)
+  let altPhone = formattedPhone;
+  if (formattedPhone.length === 12) {
+    // 553195531183 → 5531995531183 (add 9 after area code)
+    altPhone = formattedPhone.slice(0, 4) + "9" + formattedPhone.slice(4);
+  } else if (formattedPhone.length === 13) {
+    // 5531995531183 → 553195531183 (remove 9 after area code)
+    altPhone = formattedPhone.slice(0, 4) + formattedPhone.slice(5);
+  }
+
+  const { data: altUser } = await db
+    .from("User")
+    .select("*")
+    .eq("phone", altPhone)
+    .single();
+
+  return altUser;
 }
