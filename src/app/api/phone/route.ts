@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db } from "@/lib/supabase";
 import { formatPhone } from "@/lib/utils";
 import { z } from "zod";
 
@@ -12,13 +12,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { phone, pendingId } = schema.parse(body);
-
     const formattedPhone = formatPhone(phone);
 
-    await db.pendingPhone.update({
-      where: { id: pendingId },
-      data: { phone: formattedPhone },
-    });
+    const { error } = await db
+      .from("PendingPhone")
+      .update({ phone: formattedPhone })
+      .eq("id", pendingId);
+
+    if (error) throw new Error(error.message);
 
     return NextResponse.json({ success: true, phone: formattedPhone });
   } catch (err) {
@@ -27,7 +28,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Poll endpoint: check if payment is approved and phone is registered
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const pendingId = searchParams.get("pendingId");
@@ -36,17 +36,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "pendingId required" }, { status: 400 });
   }
 
-  const pending = await db.pendingPhone.findUnique({ where: { id: pendingId } });
+  const { data: pending } = await db
+    .from("PendingPhone")
+    .select("*")
+    .eq("id", pendingId)
+    .single();
 
   if (!pending) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Check if there's a payment for this preference
-  const payment = await db.payment.findFirst({
-    where: { mpPreferenceId: pending.id, status: "APPROVED" },
-    include: { subscription: true },
-  });
+  const { data: payment } = await db
+    .from("Payment")
+    .select("*, Subscription(*)")
+    .eq("mpPreferenceId", pendingId)
+    .eq("status", "APPROVED")
+    .single();
 
   return NextResponse.json({
     paid: !!payment,

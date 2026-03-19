@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db } from "@/lib/supabase";
 import { sendTextMessage } from "@/lib/zapi";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
@@ -18,61 +18,66 @@ export async function sendWelcomeMessage(phone: string, plan: string) {
 }
 
 export async function checkExpiringSubscriptions() {
-  const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000);
   const now = new Date();
-
-  // Subscriptions expiring within 2 hours, not yet notified
-  const expiring = await db.subscription.findMany({
-    where: {
-      status: "ACTIVE",
-      expiresAt: { lte: twoHoursFromNow, gt: now },
-      notified: false,
-    },
-    include: { user: true },
-  });
-
-  for (const sub of expiring) {
-    if (!sub.user.phone) continue;
-    try {
-      await sendTextMessage(
-        sub.user.phone,
-        `⚠️ *Seu acesso está acabando em breve!*\n\nNão perca o fio das suas conversas — continue usando sem interrupção 👇\n\n${APP_URL}/upsell`
-      );
-      await db.subscription.update({
-        where: { id: sub.id },
-        data: { notified: true },
-      });
-    } catch (err) {
-      console.error(`Failed to notify ${sub.user.phone}:`, err);
-    }
-  }
-
-  // Subscriptions that just expired (within last 1 hour) — send expired message
+  const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000);
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
-  const recentlyExpired = await db.subscription.findMany({
-    where: {
-      status: "ACTIVE",
-      expiresAt: { lte: now, gte: oneHourAgo },
-    },
-    include: { user: true },
-  });
+  // Subscriptions expiring in the next 2 hours, not yet notified
+  const { data: expiring } = await db
+    .from("Subscription")
+    .select("id, userId, expiresAt, User(phone)")
+    .eq("status", "ACTIVE")
+    .eq("notified", false)
+    .lte("expiresAt", twoHoursFromNow.toISOString())
+    .gt("expiresAt", now.toISOString());
 
-  for (const sub of recentlyExpired) {
-    if (!sub.user.phone) continue;
+  let expiringCount = 0;
+  for (const sub of expiring ?? []) {
+    const phone = (sub.User as { phone?: string } | null)?.phone;
+    if (!phone) continue;
     try {
-      await db.subscription.update({
-        where: { id: sub.id },
-        data: { status: "EXPIRED" },
-      });
       await sendTextMessage(
-        sub.user.phone,
-        `Seu acesso expirou 😕\n\nMas você pode continuar usando agora mesmo!\n\n👉 Ative aqui: ${APP_URL}`
+        phone,
+        `⚠️ *Seu acesso está acabando em breve!*\n\nNão perca o fio das suas conversas — continue usando sem interrupção 👇\n\n${APP_URL}/upsell`
       );
+      await db
+        .from("Subscription")
+        .update({ notified: true })
+        .eq("id", sub.id);
+      expiringCount++;
     } catch (err) {
-      console.error(`Failed to send expiry to ${sub.user.phone}:`, err);
+      console.error(`Failed to notify expiring sub ${sub.id}:`, err);
     }
   }
 
-  return { expiring: expiring.length, recentlyExpired: recentlyExpired.length };
+  // Subscriptions that just expired (within last 1 hour) — mark expired + send message
+  const { data: recentlyExpired } = await db
+    .from("Subscription")
+    .select("id, userId, User(phone)")
+    .eq("status", "ACTIVE")
+    .lte("expiresAt", now.toISOString())
+    .gte("expiresAt", oneHourAgo.toISOString());
+
+  let expiredCount = 0;
+  for (const sub of recentlyExpired ?? []) {
+    const phone = (sub.User as { phone?: string } | null)?.phone;
+    try {
+      await db
+        .from("Subscription")
+        .update({ status: "EXPIRED" })
+        .eq("id", sub.id);
+
+      if (phone) {
+        await sendTextMessage(
+          phone,
+          `Seu acesso expirou 😕\n\nMas você pode continuar usando agora mesmo!\n\n👉 Ative aqui: ${APP_URL}`
+        );
+      }
+      expiredCount++;
+    } catch (err) {
+      console.error(`Failed to process expired sub ${sub.id}:`, err);
+    }
+  }
+
+  return { expiring: expiringCount, expired: expiredCount };
 }

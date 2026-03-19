@@ -1,29 +1,29 @@
-import { db } from "@/lib/db";
+import { db } from "@/lib/supabase";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
 export default async function PagamentosPage() {
-  const payments = await db.payment.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: { user: { select: { phone: true } } },
-  });
+  const { data: payments } = await db
+    .from("Payment")
+    .select("*, User(phone)")
+    .order("createdAt", { ascending: false })
+    .limit(50);
+
+  const totalApproved = (payments ?? [])
+    .filter((p) => p.status === "APPROVED")
+    .reduce((acc, p) => acc + p.amount, 0);
 
   const statusColor: Record<string, string> = {
     APPROVED: "bg-green-500/20 text-green-400",
-    PENDING: "bg-yellow-500/20 text-yellow-400",
+    PENDING:  "bg-yellow-500/20 text-yellow-400",
     REJECTED: "bg-red-500/20 text-red-400",
     REFUNDED: "bg-zinc-700 text-zinc-400",
   };
 
   const planLabel: Record<string, string> = {
     TRIAL_24H: "24h",
-    WEEK_7D: "7 dias",
+    WEEK_7D:   "7 dias",
     MONTH_30D: "30 dias",
   };
-
-  const totalApproved = payments
-    .filter((p) => p.status === "APPROVED")
-    .reduce((acc, p) => acc + p.amount, 0);
 
   return (
     <div>
@@ -50,41 +50,24 @@ export default async function PagamentosPage() {
               </tr>
             </thead>
             <tbody>
-              {payments.map((payment) => (
-                <tr
-                  key={payment.id}
-                  className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors"
-                >
+              {(payments ?? []).map((payment) => (
+                <tr key={payment.id} className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
                   <td className="px-4 py-3 font-mono text-zinc-400 text-xs">
-                    {payment.user?.phone ?? "—"}
+                    {(payment.User as { phone?: string } | null)?.phone ?? "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        statusColor[payment.status] ?? "bg-zinc-700 text-zinc-400"
-                      }`}
-                    >
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[payment.status] ?? "bg-zinc-700 text-zinc-400"}`}>
                       {payment.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-zinc-300">
-                    {planLabel[payment.plan] || payment.plan}
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-white">
-                    {formatCurrency(payment.amount)}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-400 text-xs">
-                    {payment.method || "—"}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-zinc-500 text-xs">
-                    {payment.mpPaymentId.slice(0, 12)}…
-                  </td>
-                  <td className="px-4 py-3 text-zinc-400 text-xs whitespace-nowrap">
-                    {formatDate(payment.createdAt)}
-                  </td>
+                  <td className="px-4 py-3 text-zinc-300">{planLabel[payment.plan] || payment.plan}</td>
+                  <td className="px-4 py-3 font-semibold text-white">{formatCurrency(payment.amount)}</td>
+                  <td className="px-4 py-3 text-zinc-400 text-xs">{payment.method || "—"}</td>
+                  <td className="px-4 py-3 font-mono text-zinc-500 text-xs">{payment.mpPaymentId.slice(0, 12)}…</td>
+                  <td className="px-4 py-3 text-zinc-400 text-xs whitespace-nowrap">{formatDate(payment.createdAt)}</td>
                 </tr>
               ))}
-              {payments.length === 0 && (
+              {(payments ?? []).length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">
                     Nenhum pagamento registrado

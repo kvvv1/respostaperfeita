@@ -1,12 +1,12 @@
-import { db } from "@/lib/db";
+import { db } from "@/lib/supabase";
 import { formatDate } from "@/lib/utils";
 
 export default async function MensagensPage() {
-  const messages = await db.message.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: { user: { select: { phone: true } } },
-  });
+  const { data: messages } = await db
+    .from("Message")
+    .select("*, User(phone)")
+    .order("createdAt", { ascending: false })
+    .limit(100);
 
   return (
     <div>
@@ -25,22 +25,13 @@ export default async function MensagensPage() {
               </tr>
             </thead>
             <tbody>
-              {messages.map((msg) => (
-                <tr
-                  key={msg.id}
-                  className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors"
-                >
+              {(messages ?? []).map((msg) => (
+                <tr key={msg.id} className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
                   <td className="px-4 py-3 font-mono text-zinc-400 text-xs">
-                    {msg.user.phone}
+                    {(msg.User as { phone?: string } | null)?.phone ?? "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        msg.direction === "INBOUND"
-                          ? "bg-blue-500/20 text-blue-400"
-                          : "bg-green-500/20 text-green-400"
-                      }`}
-                    >
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${msg.direction === "INBOUND" ? "bg-blue-500/20 text-blue-400" : "bg-green-500/20 text-green-400"}`}>
                       {msg.direction === "INBOUND" ? "↓ Recebida" : "↑ Enviada"}
                     </span>
                   </td>
@@ -53,7 +44,7 @@ export default async function MensagensPage() {
                   </td>
                 </tr>
               ))}
-              {messages.length === 0 && (
+              {(messages ?? []).length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">
                     Nenhuma mensagem ainda

@@ -1,14 +1,28 @@
-import { db } from "@/lib/db";
+import { db } from "@/lib/supabase";
 import { addHours, formatPhone } from "@/lib/utils";
 import { PlanType, PLANS } from "@/lib/mercadopago";
 
 export async function findOrCreateUser(phone: string) {
   const formattedPhone = formatPhone(phone);
-  return db.user.upsert({
-    where: { phone: formattedPhone },
-    create: { phone: formattedPhone },
-    update: {},
-  });
+
+  // Try to find existing user
+  const { data: existing } = await db
+    .from("User")
+    .select("*")
+    .eq("phone", formattedPhone)
+    .single();
+
+  if (existing) return existing;
+
+  // Create new user
+  const { data: created, error } = await db
+    .from("User")
+    .insert({ phone: formattedPhone })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to create user: ${error.message}`);
+  return created!;
 }
 
 export async function activateSubscription(
@@ -19,65 +33,66 @@ export async function activateSubscription(
   amount?: number
 ) {
   const planData = PLANS[plan];
-  const expiresAt = addHours(new Date(), planData.durationHours);
+  const expiresAt = addHours(new Date(), planData.durationHours).toISOString();
 
   // Expire any active subscription
-  await db.subscription.updateMany({
-    where: { userId, status: "ACTIVE" },
-    data: { status: "EXPIRED" },
-  });
+  await db
+    .from("Subscription")
+    .update({ status: "EXPIRED" })
+    .eq("userId", userId)
+    .eq("status", "ACTIVE");
 
-  const subscription = await db.subscription.create({
-    data: {
-      userId,
-      plan,
-      status: "ACTIVE",
-      expiresAt,
-    },
-  });
+  // Create new subscription
+  const { data: sub, error: subError } = await db
+    .from("Subscription")
+    .insert({ userId, plan, status: "ACTIVE", expiresAt })
+    .select()
+    .single();
 
-  await db.payment.upsert({
-    where: { mpPaymentId },
-    create: {
-      userId,
-      subscriptionId: subscription.id,
+  if (subError) throw new Error(`Failed to create subscription: ${subError.message}`);
+
+  // Upsert payment
+  const { error: payError } = await db.from("Payment").upsert(
+    {
       mpPaymentId,
-      mpPreferenceId,
+      mpPreferenceId: mpPreferenceId ?? null,
+      userId,
+      subscriptionId: sub!.id,
       status: "APPROVED",
       amount: amount ?? planData.price,
       plan,
     },
-    update: {
-      status: "APPROVED",
-      userId,
-      subscriptionId: subscription.id,
-    },
-  });
+    { onConflict: "mpPaymentId" }
+  );
 
-  return subscription;
+  if (payError) throw new Error(`Failed to upsert payment: ${payError.message}`);
+
+  return sub!;
 }
 
 export async function getActiveSubscription(userId: string) {
-  return db.subscription.findFirst({
-    where: {
-      userId,
-      status: "ACTIVE",
-      expiresAt: { gt: new Date() },
-    },
-    orderBy: { expiresAt: "desc" },
-  });
+  const now = new Date().toISOString();
+  const { data } = await db
+    .from("Subscription")
+    .select("*")
+    .eq("userId", userId)
+    .eq("status", "ACTIVE")
+    .gt("expiresAt", now)
+    .order("expiresAt", { ascending: false })
+    .limit(1)
+    .single();
+
+  return data;
 }
 
 export async function getUserByPhone(phone: string) {
   const formattedPhone = formatPhone(phone);
-  return db.user.findUnique({
-    where: { phone: formattedPhone },
-    include: {
-      subscriptions: {
-        where: { status: "ACTIVE" },
-        orderBy: { expiresAt: "desc" },
-        take: 1,
-      },
-    },
-  });
+
+  const { data: user } = await db
+    .from("User")
+    .select("*")
+    .eq("phone", formattedPhone)
+    .single();
+
+  return user;
 }

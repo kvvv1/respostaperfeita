@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPreference } from "@/lib/mercadopago";
-import { db } from "@/lib/db";
+import { db } from "@/lib/supabase";
 import { z } from "zod";
 
 const schema = z.object({
@@ -12,18 +12,21 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const { plan } = schema.parse(body);
 
-    // Create a pending record to track this payment session
-    const pending = await db.pendingPhone.create({
-      data: { plan },
-    });
+    const { data: pending, error } = await db
+      .from("PendingPhone")
+      .insert({ plan })
+      .select()
+      .single();
 
-    const preference = await createPreference(plan, pending.id);
+    if (error) throw new Error(error.message);
+
+    const preference = await createPreference(plan, pending!.id);
 
     return NextResponse.json({
       preferenceId: preference.id,
       initPoint: preference.init_point,
       sandboxInitPoint: preference.sandbox_init_point,
-      pendingId: pending.id,
+      pendingId: pending!.id,
     });
   } catch (err) {
     console.error("Checkout error:", err);

@@ -1,28 +1,18 @@
-import { db } from "@/lib/db";
-import { formatDate, formatPhone } from "@/lib/utils";
+import { db } from "@/lib/supabase";
+import { formatDate } from "@/lib/utils";
 
 export default async function UsuariosPage() {
-  const users = await db.user.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: {
-      subscriptions: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-      _count: { select: { messages: true } },
-    },
-  });
+  const now = new Date().toISOString();
 
-  const statusColor: Record<string, string> = {
-    ACTIVE: "bg-green-500/20 text-green-400",
-    EXPIRED: "bg-zinc-700 text-zinc-400",
-    CANCELLED: "bg-red-500/20 text-red-400",
-  };
+  const { data: users } = await db
+    .from("User")
+    .select("*, Subscription(*)")
+    .order("createdAt", { ascending: false })
+    .limit(50);
 
   const planLabel: Record<string, string> = {
     TRIAL_24H: "24h",
-    WEEK_7D: "7 dias",
+    WEEK_7D:   "7 dias",
     MONTH_30D: "30 dias",
   };
 
@@ -39,29 +29,21 @@ export default async function UsuariosPage() {
                 <th className="text-left px-4 py-3">Status</th>
                 <th className="text-left px-4 py-3">Plano</th>
                 <th className="text-left px-4 py-3">Expira</th>
-                <th className="text-left px-4 py-3">Mensagens</th>
                 <th className="text-left px-4 py-3">Cadastro</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => {
-                const sub = user.subscriptions[0];
-                const isActive =
-                  sub?.status === "ACTIVE" && new Date(sub.expiresAt) > new Date();
+              {(users ?? []).map((user) => {
+                const subs = (user.Subscription as { status: string; expiresAt: string; plan: string }[] | null) ?? [];
+                const sub = subs[0];
+                const isActive = sub?.status === "ACTIVE" && sub.expiresAt > now;
 
                 return (
-                  <tr
-                    key={user.id}
-                    className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors"
-                  >
+                  <tr key={user.id} className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
                     <td className="px-4 py-3 font-mono text-zinc-300">{user.phone}</td>
                     <td className="px-4 py-3">
                       {sub ? (
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            isActive ? statusColor.ACTIVE : statusColor.EXPIRED
-                          }`}
-                        >
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${isActive ? "bg-green-500/20 text-green-400" : "bg-zinc-700 text-zinc-400"}`}>
                           {isActive ? "Ativo" : "Expirado"}
                         </span>
                       ) : (
@@ -69,21 +51,20 @@ export default async function UsuariosPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-zinc-300">
-                      {sub ? planLabel[sub.plan] || sub.plan : "—"}
+                      {sub ? (planLabel[sub.plan] || sub.plan) : "—"}
                     </td>
                     <td className="px-4 py-3 text-zinc-400 text-xs">
                       {sub ? formatDate(sub.expiresAt) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-zinc-300">{user._count.messages}</td>
                     <td className="px-4 py-3 text-zinc-400 text-xs">
                       {formatDate(user.createdAt)}
                     </td>
                   </tr>
                 );
               })}
-              {users.length === 0 && (
+              {(users ?? []).length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">
                     Nenhum usuário cadastrado
                   </td>
                 </tr>

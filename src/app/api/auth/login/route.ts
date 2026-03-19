@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db } from "@/lib/supabase";
 import { comparePassword, signToken } from "@/lib/auth";
 import { z } from "zod";
 
@@ -13,7 +13,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { email, password } = schema.parse(body);
 
-    const admin = await db.admin.findUnique({ where: { email } });
+    const { data: admin } = await db
+      .from("Admin")
+      .select("*")
+      .eq("email", email)
+      .single();
+
     if (!admin) {
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
     }
@@ -24,13 +29,12 @@ export async function POST(req: NextRequest) {
     }
 
     const token = signToken({ adminId: admin.id, email: admin.email });
-
     const res = NextResponse.json({ success: true });
     res.cookies.set("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 60 * 60 * 24, // 24h
+      maxAge: 60 * 60 * 24,
       path: "/",
     });
 

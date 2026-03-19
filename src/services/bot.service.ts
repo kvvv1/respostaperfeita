@@ -1,6 +1,6 @@
-import { db } from "@/lib/db";
+import { db } from "@/lib/supabase";
 import { generateResponse } from "@/lib/claude";
-import { sendTextMessage, sendLinkMessage } from "@/lib/zapi";
+import { sendTextMessage } from "@/lib/zapi";
 import { getUserByPhone, getActiveSubscription } from "@/services/user.service";
 import { formatPhone } from "@/lib/utils";
 
@@ -13,18 +13,19 @@ export async function handleIncomingMessage(
 ) {
   const formattedPhone = formatPhone(phone);
 
-  // Deduplication
+  // Deduplication check
   if (zapiMessageId) {
-    const existing = await db.message.findUnique({
-      where: { zapiMessageId },
-    });
+    const { data: existing } = await db
+      .from("Message")
+      .select("id")
+      .eq("zapiMessageId", zapiMessageId)
+      .single();
     if (existing) return;
   }
 
   const user = await getUserByPhone(formattedPhone);
 
   if (!user) {
-    // No user found — not a paying customer
     await sendTextMessage(
       formattedPhone,
       `Oi! 👋 Para usar o *Resposta Perfeita*, você precisa ativar seu acesso primeiro.\n\n👉 Acesse aqui: ${APP_URL}`
@@ -35,68 +36,60 @@ export async function handleIncomingMessage(
   const activeSub = await getActiveSubscription(user.id);
 
   if (!activeSub) {
-    // Expired
     await sendTextMessage(
       formattedPhone,
-      `Seu acesso expirou 😕\n\nMas calma — você pode ativar novamente agora mesmo!\n\n👉 ${APP_URL}/?reativar=1`
+      `Seu acesso expirou 😕\n\nMas calma — você pode ativar novamente agora mesmo!\n\n👉 ${APP_URL}`
     );
     return;
   }
 
   // Save inbound message
-  await db.message.create({
-    data: {
-      userId: user.id,
-      direction: "INBOUND",
-      content: messageText,
-      zapiMessageId,
-    },
+  await db.from("Message").insert({
+    userId: user.id,
+    direction: "INBOUND",
+    content: messageText,
+    zapiMessageId: zapiMessageId ?? null,
   });
 
-  // Get recent conversation history (last 6 messages)
-  const history = await db.message.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 6,
-  });
+  // Get recent conversation history (last 6 messages for context)
+  const { data: history } = await db
+    .from("Message")
+    .select("direction, content")
+    .eq("userId", user.id)
+    .order("createdAt", { ascending: false })
+    .limit(7);
 
-  const formattedHistory = history
+  const formattedHistory = (history ?? [])
     .reverse()
     .slice(0, -1) // exclude the message we just saved
     .map((m) => ({
-      role: (m.direction === "INBOUND" ? "user" : "assistant") as
-        | "user"
-        | "assistant",
+      role: (m.direction === "INBOUND" ? "user" : "assistant") as "user" | "assistant",
       content: m.content,
     }));
 
   // Generate AI response
-  const { text, outputTokens } = await generateResponse(
-    messageText,
-    formattedHistory
-  );
+  const { text, outputTokens } = await generateResponse(messageText, formattedHistory);
 
   // Save outbound message
-  await db.message.create({
-    data: {
-      userId: user.id,
-      direction: "OUTBOUND",
-      content: text,
-      tokens: outputTokens,
-    },
+  await db.from("Message").insert({
+    userId: user.id,
+    direction: "OUTBOUND",
+    content: text,
+    tokens: outputTokens,
   });
 
-  // Send response
+  // Send response via WhatsApp
   await sendTextMessage(formattedPhone, text);
 
-  // Check if expiring soon (within 2 hours) and not yet notified
+  // Check if expiring soon (within 2 hours)
   const hoursLeft =
-    (activeSub.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60);
+    (new Date(activeSub.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60);
+
   if (hoursLeft <= 2 && !activeSub.notified) {
-    await db.subscription.update({
-      where: { id: activeSub.id },
-      data: { notified: true },
-    });
+    await db
+      .from("Subscription")
+      .update({ notified: true })
+      .eq("id", activeSub.id);
 
     setTimeout(async () => {
       await sendTextMessage(

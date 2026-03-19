@@ -1,26 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") ?? "1");
   const limit = parseInt(searchParams.get("limit") ?? "30");
   const userId = searchParams.get("userId");
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
 
-  const skip = (page - 1) * limit;
+  let query = db
+    .from("Message")
+    .select("*, User(phone, name)", { count: "exact" })
+    .order("createdAt", { ascending: false })
+    .range(from, to);
 
-  const where = userId ? { userId } : {};
+  if (userId) query = query.eq("userId", userId);
 
-  const [messages, total] = await Promise.all([
-    db.message.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: "desc" },
-      include: { user: { select: { phone: true, name: true } } },
-    }),
-    db.message.count({ where }),
-  ]);
+  const { data: messages, count } = await query;
 
-  return NextResponse.json({ messages, total, page, limit });
+  return NextResponse.json({ messages: messages ?? [], total: count ?? 0, page, limit });
 }

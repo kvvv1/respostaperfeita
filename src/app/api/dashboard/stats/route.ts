@@ -1,50 +1,50 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { db } from "@/lib/supabase";
 
 export async function GET() {
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const now = new Date().toISOString();
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const startOfDay = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
 
   const [
-    totalUsers,
-    activeSubscriptions,
-    monthRevenue,
-    totalRevenue,
-    messagesToday,
-    messagesTotal,
+    { count: totalUsers },
+    { count: activeSubscriptions },
+    { data: monthPayments },
+    { data: totalPayments },
+    { count: messagesToday },
+    { data: planBreakdown },
   ] = await Promise.all([
-    db.user.count(),
-    db.subscription.count({ where: { status: "ACTIVE", expiresAt: { gt: now } } }),
-    db.payment.aggregate({
-      where: { status: "APPROVED", createdAt: { gte: startOfMonth } },
-      _sum: { amount: true },
-    }),
-    db.payment.aggregate({
-      where: { status: "APPROVED" },
-      _sum: { amount: true },
-    }),
-    db.message.count({
-      where: { direction: "INBOUND", createdAt: { gte: startOfDay } },
-    }),
-    db.message.count({ where: { direction: "INBOUND" } }),
+    db.from("User").select("*", { count: "exact", head: true }),
+    db.from("Subscription").select("*", { count: "exact", head: true })
+      .eq("status", "ACTIVE").gt("expiresAt", now),
+    db.from("Payment").select("amount").eq("status", "APPROVED").gte("createdAt", startOfMonth),
+    db.from("Payment").select("amount").eq("status", "APPROVED"),
+    db.from("Message").select("*", { count: "exact", head: true })
+      .eq("direction", "INBOUND").gte("createdAt", startOfDay),
+    db.from("Payment").select("plan, amount").eq("status", "APPROVED").gte("createdAt", startOfMonth),
   ]);
 
-  // Revenue by plan this month
-  const planBreakdown = await db.payment.groupBy({
-    by: ["plan"],
-    where: { status: "APPROVED", createdAt: { gte: startOfMonth } },
-    _sum: { amount: true },
-    _count: true,
-  });
+  const monthRevenue = (monthPayments ?? []).reduce((acc, p) => acc + p.amount, 0);
+  const totalRevenue = (totalPayments ?? []).reduce((acc, p) => acc + p.amount, 0);
+
+  // Group plan breakdown
+  const planMap: Record<string, { count: number; total: number }> = {};
+  for (const p of planBreakdown ?? []) {
+    if (!planMap[p.plan]) planMap[p.plan] = { count: 0, total: 0 };
+    planMap[p.plan].count++;
+    planMap[p.plan].total += p.amount;
+  }
 
   return NextResponse.json({
-    totalUsers,
-    activeSubscriptions,
-    monthRevenue: monthRevenue._sum.amount ?? 0,
-    totalRevenue: totalRevenue._sum.amount ?? 0,
-    messagesToday,
-    messagesTotal,
-    planBreakdown,
+    totalUsers: totalUsers ?? 0,
+    activeSubscriptions: activeSubscriptions ?? 0,
+    monthRevenue,
+    totalRevenue,
+    messagesToday: messagesToday ?? 0,
+    planBreakdown: Object.entries(planMap).map(([plan, d]) => ({
+      plan,
+      _count: d.count,
+      _sum: { amount: d.total },
+    })),
   });
 }
