@@ -1,8 +1,9 @@
+import { generateResponse, parseClaudeResponse } from "@/lib/claude";
 import { db } from "@/lib/supabase";
-import { generateResponse } from "@/lib/claude";
-import { sendTextMessage } from "@/lib/zapi";
-import { getUserByPhone, getActiveSubscription } from "@/services/user.service";
 import { formatPhone } from "@/lib/utils";
+import { buildUpsellLink } from "@/lib/whatsapp";
+import { sendTextMessage } from "@/lib/zapi";
+import { getActiveSubscription, getUserByPhone } from "@/services/user.service";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
 
@@ -13,13 +14,13 @@ export async function handleIncomingMessage(
 ) {
   const formattedPhone = formatPhone(phone);
 
-  // Deduplication check
   if (zapiMessageId) {
     const { data: existing } = await db
       .from("Message")
       .select("id")
       .eq("zapiMessageId", zapiMessageId)
       .single();
+
     if (existing) return;
   }
 
@@ -28,7 +29,7 @@ export async function handleIncomingMessage(
   if (!user) {
     await sendTextMessage(
       formattedPhone,
-      `Oi! 👋 Para usar o *Resposta Perfeita*, você precisa ativar seu acesso primeiro.\n\n👉 Acesse aqui: ${APP_URL}`
+      `Oi! Para usar o Resposta Perfeita, voce precisa ativar seu acesso primeiro.\n\nAcesse aqui: ${APP_URL}`
     );
     return;
   }
@@ -36,14 +37,15 @@ export async function handleIncomingMessage(
   const activeSub = await getActiveSubscription(user.id);
 
   if (!activeSub) {
+    const upsellLink = buildUpsellLink(APP_URL, formattedPhone);
+
     await sendTextMessage(
       formattedPhone,
-      `Seu acesso expirou 😕\n\nMas calma — você pode ativar novamente agora mesmo!\n\n👉 ${APP_URL}`
+      `Seu acesso expirou.\n\nMas calma, voce pode ativar novamente agora mesmo:\n\n${upsellLink}`
     );
     return;
   }
 
-  // Save inbound message
   await db.from("Message").insert({
     userId: user.id,
     direction: "INBOUND",
@@ -51,7 +53,6 @@ export async function handleIncomingMessage(
     zapiMessageId: zapiMessageId ?? null,
   });
 
-  // Get recent conversation history (last 6 messages for context)
   const { data: history } = await db
     .from("Message")
     .select("direction, content")
@@ -61,16 +62,19 @@ export async function handleIncomingMessage(
 
   const formattedHistory = (history ?? [])
     .reverse()
-    .slice(0, -1) // exclude the message we just saved
-    .map((m) => ({
-      role: (m.direction === "INBOUND" ? "user" : "assistant") as "user" | "assistant",
-      content: m.content,
+    .slice(0, -1)
+    .map((message) => ({
+      role: (
+        message.direction === "INBOUND" ? "user" : "assistant"
+      ) as "user" | "assistant",
+      content: message.content,
     }));
 
-  // Generate AI response
-  const { text, outputTokens } = await generateResponse(messageText, formattedHistory);
+  const { text, outputTokens } = await generateResponse(
+    messageText,
+    formattedHistory
+  );
 
-  // Save outbound message
   await db.from("Message").insert({
     userId: user.id,
     direction: "OUTBOUND",
@@ -78,14 +82,32 @@ export async function handleIncomingMessage(
     tokens: outputTokens,
   });
 
-  // Send response via WhatsApp
-  await sendTextMessage(formattedPhone, text);
+  const parsed = parseClaudeResponse(text);
 
-  // Check if expiring soon (within 2 hours)
+  if (parsed) {
+    await sendTextMessage(formattedPhone, `✅ *${parsed.contexto}*`);
+    await new Promise((r) => setTimeout(r, 800));
+    await sendTextMessage(formattedPhone, `*Opção 1:*\n${parsed.opcao1}`);
+    await new Promise((r) => setTimeout(r, 600));
+    await sendTextMessage(formattedPhone, `*Opção 2:*\n${parsed.opcao2}`);
+    await new Promise((r) => setTimeout(r, 600));
+    await sendTextMessage(formattedPhone, `*Opção 3:*\n${parsed.opcao3}`);
+    if (parsed.dica) {
+      await new Promise((r) => setTimeout(r, 600));
+      await sendTextMessage(formattedPhone, `💡 *Dica:* ${parsed.dica}`);
+    }
+    await new Promise((r) => setTimeout(r, 600));
+    await sendTextMessage(formattedPhone, `_Segure qualquer mensagem acima e toque em *Copiar* para enviar_ 👆`);
+  } else {
+    await sendTextMessage(formattedPhone, text);
+  }
+
   const hoursLeft =
     (new Date(activeSub.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60);
 
   if (hoursLeft <= 2 && !activeSub.notified) {
+    const upsellLink = buildUpsellLink(APP_URL, formattedPhone);
+
     await db
       .from("Subscription")
       .update({ notified: true })
@@ -94,7 +116,7 @@ export async function handleIncomingMessage(
     setTimeout(async () => {
       await sendTextMessage(
         formattedPhone,
-        `⚠️ Seu acesso está acabando em menos de 2 horas!\n\nNão perca suas conversas — renove agora 👇\n${APP_URL}/upsell`
+        `Seu acesso esta acabando em menos de 2 horas.\n\nNao perca suas conversas. Renove agora:\n${upsellLink}`
       );
     }, 3000);
   }
