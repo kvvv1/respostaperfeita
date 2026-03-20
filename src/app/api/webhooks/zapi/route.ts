@@ -17,17 +17,18 @@ export async function POST(req: NextRequest) {
 
   const phone = payload.phone || payload.from?.replace("@s.whatsapp.net", "");
   const messageText = payload.text?.message || payload.body || "";
+  const imageUrl = payload.image?.url || payload.imageMessage?.url || null;
+  const imageCaption = payload.image?.caption || payload.imageMessage?.caption || "";
   const messageId = payload.messageId || payload.id;
 
-  console.log("ZAPI payload type:", payload.type, "phone:", phone, "text:", messageText?.slice(0, 50));
+  console.log("ZAPI payload type:", payload.type, "phone:", phone, "image:", !!imageUrl, "text:", messageText?.slice(0, 50));
 
-  if (!phone || !messageText) {
+  if (!phone || (!messageText && !imageUrl)) {
     return NextResponse.json({ ok: true });
   }
 
-  // waitUntil keeps the function alive after response is sent (Vercel Hobby fix)
   waitUntil(
-    handleIncomingMessage(phone, messageText, messageId).catch((err) => {
+    handleIncomingMessage(phone, messageText, messageId, imageUrl, imageCaption).catch((err) => {
       console.error("Bot handler error:", err);
     })
   );
@@ -46,4 +47,6 @@ interface ZApiWebhookPayload {
   id?: string;
   text?: { message?: string };
   body?: string;
+  image?: { url?: string; caption?: string; mimeType?: string };
+  imageMessage?: { url?: string; caption?: string; mimeType?: string };
 }

@@ -97,13 +97,57 @@ export function parseClaudeResponse(text: string): ParsedResponse | null {
   }
 }
 
+async function fetchImageBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buffer = await res.arrayBuffer();
+    const data = Buffer.from(buffer).toString("base64");
+    const mimeType = res.headers.get("content-type") ?? "image/jpeg";
+    return { data, mimeType };
+  } catch {
+    return null;
+  }
+}
+
 export async function generateResponse(
   userMessage: string,
-  history: Array<{ role: "user" | "assistant"; content: string }> = []
+  history: Array<{ role: "user" | "assistant"; content: string }> = [],
+  imageUrl?: string | null
 ): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
+
+  // Build user content — text + optional image
+  let userContent: Anthropic.MessageParam["content"];
+
+  if (imageUrl) {
+    const img = await fetchImageBase64(imageUrl);
+    if (img) {
+      userContent = [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: img.mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            data: img.data,
+          },
+        },
+        {
+          type: "text",
+          text: userMessage
+            ? `${userMessage}\n\n[O usuário enviou um print de conversa acima. Analise e gere as 3 respostas.]`
+            : "[O usuário enviou um print de conversa. Analise o contexto completo e gere as 3 melhores respostas para ele usar.]",
+        },
+      ];
+    } else {
+      userContent = userMessage || "Analise o print que enviei.";
+    }
+  } else {
+    userContent = userMessage;
+  }
+
   const messages: Anthropic.MessageParam[] = [
     ...history.map((h) => ({ role: h.role, content: h.content })),
-    { role: "user", content: userMessage },
+    { role: "user", content: userContent },
   ];
 
   const response = await anthropic.messages.create({

@@ -45,7 +45,9 @@ async function sendOnboarding(phone: string) {
 export async function handleIncomingMessage(
   phone: string,
   messageText: string,
-  zapiMessageId?: string
+  zapiMessageId?: string,
+  imageUrl?: string | null,
+  imageCaption?: string
 ) {
   const formattedPhone = formatPhone(phone);
   console.log(`[BOT] Incoming from ${formattedPhone}: ${messageText.slice(0, 60)}`);
@@ -91,10 +93,14 @@ export async function handleIncomingMessage(
   console.log(`[BOT] Active subscription found, expires: ${activeSub.expiresAt}`);
 
   // Save inbound message
+  const inboundContent = imageUrl
+    ? `[imagem] ${imageCaption || messageText || "print de conversa"}`
+    : messageText;
+
   await db.from("Message").insert({
     userId: user.id,
     direction: "INBOUND",
-    content: messageText,
+    content: inboundContent,
     zapiMessageId: zapiMessageId ?? null,
   });
 
@@ -132,7 +138,12 @@ export async function handleIncomingMessage(
 
   console.log(`[BOT] Calling Claude with ${formattedHistory.length} history messages`);
 
-  const { text, outputTokens } = await generateResponse(messageText, formattedHistory);
+  // If image, notify user we're processing
+  if (imageUrl) {
+    await sendTextMessage(formattedPhone, "🔍 Analisando o print... um segundo!");
+  }
+
+  const { text, outputTokens } = await generateResponse(messageText, formattedHistory, imageUrl);
 
   console.log(`[BOT] Claude response (${outputTokens} tokens): ${text.slice(0, 80)}`);
 
