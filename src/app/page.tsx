@@ -67,7 +67,7 @@ const FAQS = [
   },
   {
     q: "E se eu não gostar?",
-    a: "Se o bot não te ajudar na primeira resposta, manda mensagem direto pra gente. A gente resolve.",
+    a: "Se a IA não te ajudar na primeira mensagem, devolvemos seu dinheiro. Sem burocracia.",
   },
   {
     q: "O pagamento é seguro?",
@@ -331,10 +331,30 @@ function Stars({ n }: { n: number }) {
   );
 }
 
+/* ── Countdown ─────────────────────────────────────────────────────────── */
+function useCountdown(target: Date) {
+  const calc = () => {
+    const diff = Math.max(0, target.getTime() - Date.now());
+    return {
+      d: Math.floor(diff / 86400000),
+      h: Math.floor((diff % 86400000) / 3600000),
+      m: Math.floor((diff % 3600000) / 60000),
+      s: Math.floor((diff % 60000) / 1000),
+    };
+  };
+  const [t, setT] = useState(calc);
+  useEffect(() => {
+    const id = setInterval(() => setT(calc()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return t;
+}
+
 /* ── Main Page ─────────────────────────────────────────────────────────── */
 export default function LandingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const countdown = useCountdown(new Date("2026-03-31T23:59:59-03:00"));
 
   const [recovery, setRecovery] = useState<{ pendingId: string } | null>(null);
 
@@ -421,7 +441,7 @@ export default function LandingPage() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/25 rounded-full px-4 py-1.5 text-green-400 text-sm font-medium mb-8 fade-up">
               <span className="w-2 h-2 bg-green-400 rounded-full blink" />
-              Bot online agora · +3.800 pessoas usando agora
+              Bot online agora · responde em segundos
             </div>
 
             {/* Headline */}
@@ -579,63 +599,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── SOLUÇÃO ───────────────────────────────────────────────────── */}
-        <section className="bg-[var(--bg-card)] border-y border-white/5 py-20 px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <p className="text-sm font-semibold text-green-400 uppercase tracking-widest mb-3">A solução</p>
-            <h2 className="text-3xl sm:text-4xl font-black mb-4">
-              Com o <span className="gradient-text">Resposta Perfeita</span>,{" "}
-              isso acaba
-            </h2>
-            <p className="text-zinc-400 mb-14 max-w-lg mx-auto">
-              Nossa IA entende o contexto e sugere exatamente o que falar — com seu tom, natural e eficaz.
-            </p>
-
-            <div className="grid sm:grid-cols-3 gap-5">
-              {[
-                {
-                  icon: (
-                    <svg className="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  ),
-                  title: "Resposta em segundos",
-                  desc: "Sem pensar, sem travar. A IA faz o trabalho pesado enquanto você mantém a conversa fluindo.",
-                },
-                {
-                  icon: (
-                    <svg className="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  ),
-                  title: "Certeiro no contexto",
-                  desc: "Paquera, trabalho ou conflito — a IA lê o tom e entende a situação sem você precisar explicar.",
-                },
-                {
-                  icon: (
-                    <svg className="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
-                    </svg>
-                  ),
-                  title: "Soa como você",
-                  desc: "As respostas são naturais, não robóticas. Quem receber vai pensar que foi você mesmo que escreveu.",
-                },
-              ].map((card, i) => (
-                <div
-                  key={i}
-                  className="glow-card bg-[var(--bg-card2)] rounded-2xl p-6 text-left hover:scale-[1.02] transition-transform"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4">
-                    {card.icon}
-                  </div>
-                  <h3 className="font-bold text-lg mb-2">{card.title}</h3>
-                  <p className="text-zinc-400 text-sm leading-relaxed">{card.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* ── DEPOIMENTOS ───────────────────────────────────────────────── */}
         <section className="bg-[var(--bg-card)] border-y border-white/5 py-20 px-4">
           <div className="max-w-3xl mx-auto">
@@ -675,9 +638,26 @@ export default function LandingPage() {
           </h2>
           <p className="text-zinc-400 mb-4">Escolha o plano ideal. Cancele quando quiser.</p>
 
-          {/* Mês do Consumidor badge */}
-          <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 py-1.5 text-yellow-400 text-sm font-semibold mb-10">
+          {/* Mês do Consumidor badge + countdown */}
+          <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 py-1.5 text-yellow-400 text-sm font-semibold mb-4">
             🎉 Mês do Consumidor — descontos especiais ativos
+          </div>
+          <div className="flex items-center justify-center gap-2 mb-10">
+            <span className="text-zinc-500 text-sm">Oferta encerra em:</span>
+            {[
+              { v: countdown.d, label: "dias" },
+              { v: countdown.h, label: "horas" },
+              { v: countdown.m, label: "min" },
+              { v: countdown.s, label: "seg" },
+            ].map(({ v, label }, i) => (
+              <div key={i} className="flex items-center gap-2">
+                {i > 0 && <span className="text-zinc-600 font-bold">:</span>}
+                <div className="bg-[var(--bg-card)] border border-white/5 rounded-xl px-3 py-1.5 text-center min-w-[48px]">
+                  <p className="text-white font-black text-lg leading-none">{String(v).padStart(2, "0")}</p>
+                  <p className="text-zinc-600 text-[10px] mt-0.5">{label}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="grid sm:grid-cols-3 gap-5 mb-10">
