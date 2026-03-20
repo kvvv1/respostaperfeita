@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
   const imageCaption = payload.image?.caption || payload.imageMessage?.caption || "";
   const messageId = payload.messageId || payload.id;
 
-  console.log("ZAPI payload type:", payload.type, "phone:", phone, "image:", !!imageUrl, "text:", messageText?.slice(0, 50));
+  console.log("ZAPI full payload keys:", Object.keys(payload));
+  console.log("ZAPI payload type:", payload.type, "phone:", phone, "image:", !!imageUrl, "imageUrl:", imageUrl?.slice(0, 80), "text:", messageText?.slice(0, 50));
 
   if (!phone || (!messageText && !imageUrl)) {
     return NextResponse.json({ ok: true });
