@@ -234,9 +234,20 @@ export async function handleIncomingMessage(
     tokens: outputTokens,
   });
 
+  // Count previous responses to decide whether to show copy hint
+  const { count: responseCount } = await db
+    .from("Message")
+    .select("id", { count: "exact", head: true })
+    .eq("userId", user.id)
+    .eq("direction", "OUTBOUND")
+    .neq("content", "[onboarding]");
+
   const parsed = parseClaudeResponse(text);
   if (parsed) {
-    await sendTextMessage(formattedPhone, `✅ *${parsed.contexto}*`);
+    await sendTextMessage(
+      formattedPhone,
+      `✅ *${parsed.contexto}*\n\n💙 carinhosa · ⚡ direta · 🧠 estratégica ↓`
+    );
     await delay(800);
     await sendTextMessage(formattedPhone, parsed.opcao1);
     await delay(600);
@@ -247,8 +258,10 @@ export async function handleIncomingMessage(
       await delay(600);
       await sendTextMessage(formattedPhone, `💡 *Dica:* ${parsed.dica}`);
     }
-    await delay(600);
-    await sendTextMessage(formattedPhone, `_Segure a mensagem que preferir e toque em *Copiar* para enviar_ 👆`);
+    if ((responseCount ?? 0) < 3) {
+      await delay(600);
+      await sendTextMessage(formattedPhone, `_Segure a mensagem que preferir e toque em *Copiar* para enviar_ 👆`);
+    }
   } else {
     await sendTextMessage(formattedPhone, text);
   }

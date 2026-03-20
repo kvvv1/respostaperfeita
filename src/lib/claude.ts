@@ -37,7 +37,7 @@ Regras das respostas:
 - Soar 100% humana, natural, brasileiro casual
 - Curta como mensagem real de WhatsApp (máx 3 linhas)
 - Emojis só quando ficarem naturais
-- Opção 1: leve/casual, Opção 2: direta, Opção 3: estratégica/inteligente
+- Opção 1: carinhosa/emocional (💙), Opção 2: direta/objetiva (⚡), Opção 3: estratégica/inteligente (🧠)
 
 ---
 
