@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { trackInitiateCheckout } from "@/components/MetaPixel";
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
@@ -75,8 +75,52 @@ const FAQS = [
   },
 ];
 
+/* ── WhatsApp Demo sub-components (outside to prevent recreation on parent re-render) ── */
+function WaRecv({ text, time }: { text: string; time: string }) {
+  return (
+    <div className="flex justify-start animate-[fadeIn_0.25s_ease-out]">
+      <div className="relative max-w-[82%] bg-[#202C33] rounded-[10px] rounded-tl-[2px] px-3 py-[6px] shadow-sm">
+        <div className="absolute -left-[6px] top-0 w-0 h-0 border-t-[7px] border-t-[#202C33] border-l-[7px] border-l-transparent" />
+        <p className="text-[#E9EDEF] text-[13px] leading-snug whitespace-pre-line">{text}</p>
+        <p className="text-[#8696A0] text-[10px] text-right mt-[3px]">{time}</p>
+      </div>
+    </div>
+  );
+}
+
+function WaSent({ text, time, read }: { text: string; time: string; read: boolean }) {
+  return (
+    <div className="flex justify-end animate-[fadeIn_0.25s_ease-out]">
+      <div className="relative max-w-[82%] bg-[#005C4B] rounded-[10px] rounded-tr-[2px] px-3 py-[6px] shadow-sm">
+        <div className="absolute -right-[6px] top-0 w-0 h-0 border-t-[7px] border-t-[#005C4B] border-r-[7px] border-r-transparent" />
+        <p className="text-[#E9EDEF] text-[13px] leading-snug whitespace-pre-line">{text}</p>
+        <div className="flex items-center justify-end gap-1 mt-[3px]">
+          <span className="text-[#8696A0] text-[10px]">{time}</span>
+          <svg className={`w-4 h-[9px] ${read ? "text-[#53BDEB]" : "text-[#8696A0]"}`} viewBox="0 0 16 11" fill="currentColor">
+            <path d="M11.071.653a.75.75 0 0 1 .976 1.138l-6.5 6a.75.75 0 0 1-1.076-.093l-2.5-3a.75.75 0 1 1 1.158-.964L5.292 6.7l5.779-6.047zm3 0a.75.75 0 0 1 .976 1.138l-6.5 6a.75.75 0 0 1-.961.046L9.5 6.42l.74-.848.617.538 5.214-5.457z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WaDots() {
+  return (
+    <div className="flex justify-start animate-[fadeIn_0.25s_ease-out]">
+      <div className="bg-[#202C33] rounded-[10px] rounded-tl-[2px] px-3 py-3">
+        <span className="flex gap-[5px] items-center">
+          {[0,1,2].map(d => (
+            <span key={d} className="w-[7px] h-[7px] bg-[#8696A0] rounded-full animate-bounce" style={{ animationDelay: `${d * 200}ms` }} />
+          ))}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /* ── WhatsApp Demo ──────────────────────────────────────────────────────── */
-function WhatsAppDemo() {
+const WhatsAppDemo = memo(function WhatsAppDemo() {
   const [phase, setPhase] = useState<0 | 1 | 2>(0);
   const [step, setStep]   = useState(0);
   const [typing, setTyping] = useState(false);
@@ -103,43 +147,6 @@ function WhatsAppDemo() {
     const id = setInterval(() => setTick(k => k + 1), 17000);
     return () => clearInterval(id);
   }, []);
-
-  const Recv = ({ text, time }: { text: string; time: string }) => (
-    <div className="flex justify-start animate-[fadeIn_0.25s_ease-out]">
-      <div className="relative max-w-[82%] bg-[#202C33] rounded-[10px] rounded-tl-[2px] px-3 py-[6px] shadow-sm">
-        <div className="absolute -left-[6px] top-0 w-0 h-0 border-t-[7px] border-t-[#202C33] border-l-[7px] border-l-transparent" />
-        <p className="text-[#E9EDEF] text-[13px] leading-snug whitespace-pre-line">{text}</p>
-        <p className="text-[#8696A0] text-[10px] text-right mt-[3px]">{time}</p>
-      </div>
-    </div>
-  );
-
-  const Sent = ({ text, time, read }: { text: string; time: string; read: boolean }) => (
-    <div className="flex justify-end animate-[fadeIn_0.25s_ease-out]">
-      <div className="relative max-w-[82%] bg-[#005C4B] rounded-[10px] rounded-tr-[2px] px-3 py-[6px] shadow-sm">
-        <div className="absolute -right-[6px] top-0 w-0 h-0 border-t-[7px] border-t-[#005C4B] border-r-[7px] border-r-transparent" />
-        <p className="text-[#E9EDEF] text-[13px] leading-snug whitespace-pre-line">{text}</p>
-        <div className="flex items-center justify-end gap-1 mt-[3px]">
-          <span className="text-[#8696A0] text-[10px]">{time}</span>
-          <svg className={`w-4 h-[9px] ${read ? "text-[#53BDEB]" : "text-[#8696A0]"}`} viewBox="0 0 16 11" fill="currentColor">
-            <path d="M11.071.653a.75.75 0 0 1 .976 1.138l-6.5 6a.75.75 0 0 1-1.076-.093l-2.5-3a.75.75 0 1 1 1.158-.964L5.292 6.7l5.779-6.047zm3 0a.75.75 0 0 1 .976 1.138l-6.5 6a.75.75 0 0 1-.961.046L9.5 6.42l.74-.848.617.538 5.214-5.457z"/>
-          </svg>
-        </div>
-      </div>
-    </div>
-  );
-
-  const Dots = () => (
-    <div className="flex justify-start animate-[fadeIn_0.25s_ease-out]">
-      <div className="bg-[#202C33] rounded-[10px] rounded-tl-[2px] px-3 py-3">
-        <span className="flex gap-[5px] items-center">
-          {[0,1,2].map(d => (
-            <span key={d} className="w-[7px] h-[7px] bg-[#8696A0] rounded-full animate-bounce" style={{ animationDelay: `${d * 200}ms` }} />
-          ))}
-        </span>
-      </div>
-    </div>
-  );
 
   const isBot = phase === 1;
   const headerName     = isBot ? "Resposta Perfeita" : "Ju 💚";
@@ -222,16 +229,16 @@ function WhatsAppDemo() {
 
           {phase === 0 && (
             <>
-              {step >= 1 && <Recv text="tá bom né. fica assim então." time="21:14" />}
+              {step >= 1 && <WaRecv text="tá bom né. fica assim então." time="21:14" />}
             </>
           )}
 
           {phase === 1 && (
             <>
-              {step >= 1 && <Sent text="tá bom né. fica assim então." time="21:15" read={false} />}
-              {typing && <Dots />}
+              {step >= 1 && <WaSent text="tá bom né. fica assim então." time="21:15" read={false} />}
+              {typing && <WaDots />}
               {step >= 2 && (
-                <Recv
+                <WaRecv
                   text={"✅ Opção 1:\nei, não quero ficar assim com você. me fala o que tá te incomodando? 🥺\n\n✅ Opção 2:\nnão quero isso não... posso te ligar? quero resolver isso 💚"}
                   time="21:15"
                 />
@@ -241,9 +248,9 @@ function WhatsAppDemo() {
 
           {phase === 2 && (
             <>
-              {step >= 1 && <Recv text="tá bom né. fica assim então." time="21:14" />}
-              {step >= 2 && <Sent text="ei, não quero ficar assim com você. me fala o que tá te incomodando? 🥺" time="21:16" read={true} />}
-              {step >= 3 && <Recv text="tá... desculpa, tô chateada mesmo. a gente conversa? 💚" time="21:16" />}
+              {step >= 1 && <WaRecv text="tá bom né. fica assim então." time="21:14" />}
+              {step >= 2 && <WaSent text="ei, não quero ficar assim com você. me fala o que tá te incomodando? 🥺" time="21:16" read={true} />}
+              {step >= 3 && <WaRecv text="tá... desculpa, tô chateada mesmo. a gente conversa? 💚" time="21:16" />}
             </>
           )}
         </div>
@@ -275,7 +282,7 @@ function WhatsAppDemo() {
       </div>
     </div>
   );
-}
+});
 
 /* ── Social Proof Toast ────────────────────────────────────────────────── */
 function LiveNotification() {
