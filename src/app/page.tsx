@@ -408,26 +408,10 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* ── STICKY HEADER ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#080808]/80 border-b border-white/5">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="font-black text-white text-lg">
-            Resposta<span className="text-green-400">Perfeita</span>
-          </span>
-          <button
-            onClick={() => handleBuy()}
-            disabled={!!loading}
-            className="bg-green-500 hover:bg-green-400 text-black font-bold text-sm px-4 py-2 rounded-xl transition-all duration-200 hidden sm:block"
-          >
-            {loading ? "..." : "Ativar por R$ 9,90"}
-          </button>
-        </div>
-      </header>
-
       <main className="overflow-x-hidden">
 
         {/* ── HERO ──────────────────────────────────────────────────────── */}
-        <section className="relative pt-16 pb-12 px-4">
+        <section className="relative pt-10 pb-12 px-4">
           {/* Background glow */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-green-500/5 rounded-full blur-3xl" />
@@ -459,7 +443,12 @@ export default function LandingPage() {
 
             {/* CTA */}
             <div className="flex flex-col items-center gap-3 fade-up-delay2">
-              <BuyBtn size="xl" />
+              <button
+                onClick={() => document.getElementById("planos")?.scrollIntoView({ behavior: "smooth" })}
+                className="btn-pulse relative overflow-hidden bg-green-500 hover:bg-green-400 active:scale-[0.98] text-black font-black rounded-2xl transition-all duration-200 text-xl px-10 py-5 max-w-sm w-full"
+              >
+                👉 Ver planos e ativar
+              </button>
               <div className="flex items-center gap-4 text-zinc-500 text-sm">
                 <span className="flex items-center gap-1.5">
                   <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -679,7 +668,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── OFERTA / PRICING ──────────────────────────────────────────── */}
-        <section className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <section id="planos" className="max-w-4xl mx-auto px-4 py-20 text-center">
           <p className="text-sm font-semibold text-green-400 uppercase tracking-widest mb-3">Preço</p>
           <h2 className="text-3xl sm:text-4xl font-black mb-2">
             Comece agora sem risco
@@ -835,7 +824,12 @@ export default function LandingPage() {
                 Teste agora por <span className="text-white font-bold">R$ 9,90</span> — 24h sem risco.
               </p>
               <div className="flex flex-col items-center gap-3">
-                <BuyBtn size="xl" label="👉 Ativar meu acesso agora" />
+                <button
+                  onClick={() => document.getElementById("planos")?.scrollIntoView({ behavior: "smooth" })}
+                  className="btn-pulse relative overflow-hidden bg-green-500 hover:bg-green-400 active:scale-[0.98] text-black font-black rounded-2xl transition-all duration-200 text-xl px-10 py-5 max-w-sm w-full"
+                >
+                  👉 Escolher meu plano
+                </button>
                 <p className="text-zinc-600 text-sm">Ativa em 2 minutos · Sem app · Direto no WhatsApp</p>
               </div>
             </div>
