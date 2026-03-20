@@ -1,7 +1,9 @@
 import { generateResponse, parseClaudeResponse } from "@/lib/claude";
 import { db } from "@/lib/supabase";
 import { formatPhone } from "@/lib/utils";
-import { buildUpsellLink } from "@/lib/whatsapp";
+function renewalLink(phone: string) {
+  return `${APP_URL}/renovar?phone=${encodeURIComponent(phone)}`;
+}
 import { sendTextMessage } from "@/lib/zapi";
 import {
   getActiveSubscription,
@@ -90,7 +92,7 @@ export async function handleIncomingMessage(
   if (!user) {
     await sendTextMessage(
       formattedPhone,
-      `Oi! 👋 Para usar o *Resposta Perfeita*, ative seu acesso primeiro:\n\n${APP_URL}`
+      `Oi! 👋 Você ainda não tem acesso ao *Resposta Perfeita*.\n\nAtive agora por R$ 9,90 e nunca mais trave numa resposta:\n${APP_URL}`
     );
     return;
   }
@@ -98,10 +100,9 @@ export async function handleIncomingMessage(
   const activeSub = await getActiveSubscription(user.id);
 
   if (!activeSub) {
-    const upsellLink = buildUpsellLink(APP_URL, formattedPhone);
     await sendTextMessage(
       formattedPhone,
-      `Seu acesso expirou. 😕\n\nReative agora e continue:\n\n${upsellLink}`
+      `Opa, seu acesso expirou. 😕\n\nMas você já sabe como funciona — é só reativar e continuar de onde parou.\n\n👇 Escolha seu plano (tem opção de 24h por R$ 9,90):\n${renewalLink(formattedPhone)}`
     );
     return;
   }
@@ -257,11 +258,10 @@ export async function handleIncomingMessage(
 
   if (hoursLeft <= 2 && !activeSub.notified) {
     await db.from("Subscription").update({ notified: true }).eq("id", activeSub.id);
-    const upsellLink = buildUpsellLink(APP_URL, formattedPhone);
     setTimeout(async () => {
       await sendTextMessage(
         formattedPhone,
-        `⚠️ *Atenção: seu acesso expira em menos de 2 horas!*\n\nRenove agora:\n${upsellLink}\n\n_7 dias por R$ 19,90 · 30 dias por R$ 39,90_`
+        `⚠️ *Seu acesso expira em menos de 2 horas!*\n\nNão deixa travar numa hora importante — renove agora em 1 minuto:\n${renewalLink(formattedPhone)}`
       );
     }, 3000);
   }
