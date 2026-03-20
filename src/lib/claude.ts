@@ -103,9 +103,15 @@ async function fetchImageBase64(url: string): Promise<{ data: string; mimeType: 
     if (process.env.ZAPI_CLIENT_TOKEN) {
       headers["Client-Token"] = process.env.ZAPI_CLIENT_TOKEN;
     }
-    const res = await fetch(url, { headers });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(url, { headers, signal: controller.signal });
+    clearTimeout(timeout);
     if (!res.ok) return null;
+    const contentLength = parseInt(res.headers.get("content-length") ?? "0");
+    if (contentLength > 10 * 1024 * 1024) return null; // 10 MB max
     const buffer = await res.arrayBuffer();
+    if (buffer.byteLength > 10 * 1024 * 1024) return null;
     const data = Buffer.from(buffer).toString("base64");
     const mimeType = res.headers.get("content-type") ?? "image/jpeg";
     return { data, mimeType };

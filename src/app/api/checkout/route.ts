@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
 
     if (error) throw new Error(error.message);
 
-    const origin = req.headers.get("origin") ?? req.headers.get("referer")?.replace(/\/[^/]*$/, "") ?? undefined;
+    const rawOrigin = req.headers.get("origin") ?? req.headers.get("referer")?.replace(/\/[^/]*$/, "");
+    const allowedOrigins = ["https://www.respostaperfeita.com", "https://respostaperfeita.com", "http://localhost:3000"];
+    const origin = rawOrigin && allowedOrigins.includes(rawOrigin) ? rawOrigin : undefined;
     const preference = await createPreference(plan, pending!.id, origin);
 
     // Save real MP preference ID so /api/phone can find the payment later

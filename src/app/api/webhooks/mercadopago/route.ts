@@ -77,6 +77,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
+    // ── Idempotency: skip if subscription already activated for this payment ──
+    const { data: existingPayment } = await db
+      .from("Payment")
+      .select("subscriptionId")
+      .eq("mpPaymentId", mpPaymentId)
+      .single();
+    if (existingPayment?.subscriptionId) {
+      console.log(`MP payment ${mpPaymentId} already activated — skipping`);
+      return NextResponse.json({ ok: true });
+    }
+
     // Get phone from PendingPhone via pendingId or external_reference
     let phone: string | undefined;
 

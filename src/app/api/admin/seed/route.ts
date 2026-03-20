@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { hashPassword } from "@/lib/auth";
 
-export async function POST() {
+export async function POST(req: Request) {
+  const token = req.headers.get("x-seed-token");
+  if (!token || token !== process.env.SEED_SECRET) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const email = process.env.ADMIN_EMAIL!;
   const password = process.env.ADMIN_PASSWORD!;
 
