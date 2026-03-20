@@ -26,6 +26,7 @@ export type Tables = {
     startedAt: string;
     expiresAt: string;
     notified: boolean;
+    notified24h: boolean;
     createdAt: string;
     updatedAt: string;
   };
