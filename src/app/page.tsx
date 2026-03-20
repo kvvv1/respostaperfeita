@@ -142,7 +142,7 @@ function WhatsAppDemo() {
   );
 
   const isBot = phase === 1;
-  const headerName     = isBot ? "Resposta Perfeita" : "Ana 💚";
+  const headerName     = isBot ? "Resposta Perfeita" : "Ju 💚";
   const headerAvatar   = isBot ? "RP" : "A";
   const headerSub      = isBot
     ? (typing ? "digitando..." : "online agora")
@@ -222,18 +222,18 @@ function WhatsAppDemo() {
 
           {phase === 0 && (
             <>
-              {step >= 1 && <Recv text="oi, sumiu né? rsrs 😅" time="10:22" />}
+              {step >= 1 && <Recv text="tá bom né. fica assim então." time="21:14" />}
             </>
           )}
 
           {phase === 1 && (
             <>
-              {step >= 1 && <Sent text="oi, sumiu né? rsrs 😅" time="10:23" read={false} />}
+              {step >= 1 && <Sent text="tá bom né. fica assim então." time="21:15" read={false} />}
               {typing && <Dots />}
               {step >= 2 && (
                 <Recv
-                  text={"✅ Opção 1:\nhaha tava aqui só na minha, mas agora apareci 😄\n\n✅ Opção 2:\nrs verdade! tô aqui agora 😅 tudo bem?"}
-                  time="10:23"
+                  text={"✅ Opção 1:\nei, não quero ficar assim com você. me fala o que tá te incomodando? 🥺\n\n✅ Opção 2:\nnão quero isso não... posso te ligar? quero resolver isso 💚"}
+                  time="21:15"
                 />
               )}
             </>
@@ -241,9 +241,9 @@ function WhatsAppDemo() {
 
           {phase === 2 && (
             <>
-              {step >= 1 && <Recv text="oi, sumiu né? rsrs 😅" time="10:22" />}
-              {step >= 2 && <Sent text="haha tava aqui só na minha, mas agora apareci 😄" time="10:25" read={true} />}
-              {step >= 3 && <Recv text="haha oi! tudo ótimo 😍" time="10:25" />}
+              {step >= 1 && <Recv text="tá bom né. fica assim então." time="21:14" />}
+              {step >= 2 && <Sent text="ei, não quero ficar assim com você. me fala o que tá te incomodando? 🥺" time="21:16" read={true} />}
+              {step >= 3 && <Recv text="tá... desculpa, tô chateada mesmo. a gente conversa? 💚" time="21:16" />}
             </>
           )}
         </div>
@@ -266,7 +266,7 @@ function WhatsAppDemo() {
 
       {/* Scene labels */}
       <div className="flex justify-center gap-4 mt-3">
-        {(["ficou travado 😬", "usou o bot ✨", "ela respondeu 😍"] as const).map((label, i) => (
+        {(["travou 😬", "usou o bot ✨", "ela abriu 💚"] as const).map((label, i) => (
           <div key={i} className={`flex items-center gap-1 text-[11px] transition-all duration-500 ${phase === i ? "text-green-400" : "text-zinc-700"}`}>
             <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${phase === i ? "bg-green-400" : "bg-zinc-700"}`} />
             <span className="hidden sm:inline">{label}</span>
