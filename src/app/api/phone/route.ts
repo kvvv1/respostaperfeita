@@ -29,14 +29,14 @@ export async function POST(req: NextRequest) {
     // Check if payment is already approved (webhook may have arrived before phone was entered)
     const { data: pending } = await db
       .from("PendingPhone")
-      .select("plan")
+      .select("plan, mpPreferenceId")
       .eq("id", pendingId)
       .single();
 
     const { data: payment } = await db
       .from("Payment")
       .select("*")
-      .eq("mpPreferenceId", pendingId)
+      .eq("mpPreferenceId", pending?.mpPreferenceId ?? "")
       .eq("status", "APPROVED")
       .maybeSingle();
 

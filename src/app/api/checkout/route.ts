@@ -23,6 +23,11 @@ export async function POST(req: NextRequest) {
     const origin = req.headers.get("origin") ?? req.headers.get("referer")?.replace(/\/[^/]*$/, "") ?? undefined;
     const preference = await createPreference(plan, pending!.id, origin);
 
+    // Save real MP preference ID so /api/phone can find the payment later
+    await db.from("PendingPhone")
+      .update({ mpPreferenceId: preference.id })
+      .eq("id", pending!.id);
+
     return NextResponse.json({
       preferenceId: preference.id,
       initPoint: preference.init_point,
