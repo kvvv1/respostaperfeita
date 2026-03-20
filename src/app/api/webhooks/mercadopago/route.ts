@@ -46,7 +46,17 @@ export async function POST(req: NextRequest) {
     const plan             = ((mpData.metadata?.plan ?? mpAny.metadata) as string | undefined) ?? "TRIAL_24H";
     const externalRef      = mpAny.external_reference as string | undefined;
     const pendingId        = (mpData.metadata?.pendingId as string | undefined) ?? externalRef;
-    const preferenceId     = mpAny.preference_id as string | undefined;
+    let   preferenceId     = mpAny.preference_id as string | undefined;
+
+    // If preference_id is missing from MP response, fetch it from PendingPhone
+    if (!preferenceId && pendingId) {
+      const { data: pp } = await db
+        .from("PendingPhone")
+        .select("mpPreferenceId")
+        .eq("id", pendingId)
+        .single();
+      preferenceId = pp?.mpPreferenceId ?? undefined;
+    }
 
     // ── Upsert payment record ───────────────────────────────────────────────
     await db.from("Payment").upsert(

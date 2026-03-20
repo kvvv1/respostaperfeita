@@ -33,12 +33,28 @@ export async function POST(req: NextRequest) {
       .eq("id", pendingId)
       .single();
 
-    const { data: payment } = await db
-      .from("Payment")
-      .select("*")
-      .eq("mpPreferenceId", pending?.mpPreferenceId ?? "")
-      .eq("status", "APPROVED")
-      .maybeSingle();
+    // Look up by mpPreferenceId; fallback to any APPROVED payment linked via mpPaymentId in rawWebhook containing pendingId
+    let payment = null;
+    if (pending?.mpPreferenceId) {
+      const { data } = await db
+        .from("Payment")
+        .select("*")
+        .eq("mpPreferenceId", pending.mpPreferenceId)
+        .eq("status", "APPROVED")
+        .maybeSingle();
+      payment = data;
+    }
+    // Fallback: find APPROVED payment where mpPreferenceId is null but rawWebhook contains pendingId
+    if (!payment) {
+      const { data } = await db
+        .from("Payment")
+        .select("*")
+        .eq("status", "APPROVED")
+        .is("mpPreferenceId", null)
+        .ilike("rawWebhook", `%${pendingId}%`)
+        .maybeSingle();
+      payment = data;
+    }
 
     if (payment && pending) {
       // Payment already approved — activate subscription now
