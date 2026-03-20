@@ -480,23 +480,85 @@ export default function LandingPage() {
         <div className="border-y border-white/5 bg-[var(--bg-card)] py-4 px-4">
           <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-zinc-400">
             <span className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-400 rounded-full blink" />
-              <span className="text-green-400 font-bold">3.847</span> usando agora
+              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              Pagamento via <span className="text-white font-semibold">Mercado Pago</span>
             </span>
             <span className="hidden sm:block w-px h-4 bg-zinc-700" />
             <span className="flex items-center gap-2">
-              <span className="text-green-400 font-bold">+12.000</span> conversas respondidas hoje
+              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Ativa em <span className="text-white font-semibold">menos de 2 minutos</span>
             </span>
             <span className="hidden sm:block w-px h-4 bg-zinc-700" />
             <span className="flex items-center gap-2">
-              <span className="text-green-400 font-bold">4.8★</span> avaliação média
+              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-white font-semibold">Sem app</span> — funciona no WhatsApp normal
             </span>
             <span className="hidden sm:block w-px h-4 bg-zinc-700" />
             <span className="flex items-center gap-2">
-              <span className="text-green-400 font-bold">98%</span> recomendam
+              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              PIX ou <span className="text-white font-semibold">cartão</span>
             </span>
           </div>
         </div>
+
+        {/* ── COMO FUNCIONA ─────────────────────────────────────────────── */}
+        <section className="max-w-3xl mx-auto px-4 py-16">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold text-green-400 uppercase tracking-widest mb-3">Simples assim</p>
+            <h2 className="text-3xl sm:text-4xl font-black">Como funciona?</h2>
+          </div>
+
+          <div className="relative">
+            <div className="absolute left-6 top-8 bottom-8 w-px bg-gradient-to-b from-green-500/50 via-green-500/20 to-transparent hidden sm:block" />
+            <div className="space-y-8">
+              {[
+                {
+                  step: "1",
+                  title: "Pague R$ 9,90",
+                  desc: "Pagamento via PIX ou cartão pelo Mercado Pago. Aprovação instantânea.",
+                  badge: "2 min",
+                },
+                {
+                  step: "2",
+                  title: "Informe seu WhatsApp",
+                  desc: "Enviamos o contato do bot direto pra você. Só adicionar e pronto.",
+                  badge: "1 min",
+                },
+                {
+                  step: "3",
+                  title: "Mande a mensagem recebida",
+                  desc: "Cole qualquer mensagem que travou você. O bot responde com 2-3 opções prontas pra copiar.",
+                  badge: "segundos",
+                },
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-5">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-12 h-12 bg-green-500 text-black font-black rounded-2xl flex items-center justify-center text-xl shadow-lg shadow-green-500/25">
+                      {item.step}
+                    </div>
+                  </div>
+                  <div className="pt-1 flex-1">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="font-bold text-lg">{item.title}</h3>
+                      <span className="text-xs bg-green-500/10 text-green-400 border border-green-500/20 rounded-full px-2.5 py-0.5 font-medium">
+                        {item.badge}
+                      </span>
+                    </div>
+                    <p className="text-zinc-400">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* ── PROBLEMA ──────────────────────────────────────────────────── */}
         <section className="max-w-3xl mx-auto px-4 py-20">
@@ -579,59 +641,6 @@ export default function LandingPage() {
                   </div>
                   <h3 className="font-bold text-lg mb-2">{card.title}</h3>
                   <p className="text-zinc-400 text-sm leading-relaxed">{card.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── COMO FUNCIONA ─────────────────────────────────────────────── */}
-        <section className="max-w-3xl mx-auto px-4 py-20">
-          <div className="text-center mb-12">
-            <p className="text-sm font-semibold text-green-400 uppercase tracking-widest mb-3">Simples assim</p>
-            <h2 className="text-3xl sm:text-4xl font-black">Como funciona?</h2>
-          </div>
-
-          <div className="relative">
-            {/* Connector line */}
-            <div className="absolute left-6 top-8 bottom-8 w-px bg-gradient-to-b from-green-500/50 via-green-500/20 to-transparent hidden sm:block" />
-
-            <div className="space-y-8">
-              {[
-                {
-                  step: "1",
-                  title: "Pague R$ 9,90",
-                  desc: "Pagamento via PIX ou cartão pelo Mercado Pago. Aprovação instantânea.",
-                  badge: "2 min",
-                },
-                {
-                  step: "2",
-                  title: "Informe seu WhatsApp",
-                  desc: "Enviamos o contato do bot direto pra você. Só adicionar e pronto.",
-                  badge: "1 min",
-                },
-                {
-                  step: "3",
-                  title: "Mande a mensagem recebida",
-                  desc: "Cole qualquer mensagem que travou você. O bot responde com 2-3 opções prontas pra copiar.",
-                  badge: "segundos",
-                },
-              ].map((item, i) => (
-                <div key={i} className="flex items-start gap-5">
-                  <div className="relative flex-shrink-0">
-                    <div className="w-12 h-12 bg-green-500 text-black font-black rounded-2xl flex items-center justify-center text-xl shadow-lg shadow-green-500/25">
-                      {item.step}
-                    </div>
-                  </div>
-                  <div className="pt-1 flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="font-bold text-lg">{item.title}</h3>
-                      <span className="text-xs bg-green-500/10 text-green-400 border border-green-500/20 rounded-full px-2.5 py-0.5 font-medium">
-                        {item.badge}
-                      </span>
-                    </div>
-                    <p className="text-zinc-400">{item.desc}</p>
-                  </div>
                 </div>
               ))}
             </div>
@@ -820,14 +829,14 @@ export default function LandingPage() {
             </div>
             <div className="relative">
               <p className="text-3xl sm:text-4xl font-black mb-3">
-                Ainda em dúvida?
+                Ela já respondeu.<br />Você vai saber o que falar?
               </p>
               <p className="text-xl text-zinc-400 mb-8">
-                Teste por <span className="text-white font-bold">R$ 9,90</span> — 24h sem risco.
+                Teste agora por <span className="text-white font-bold">R$ 9,90</span> — 24h sem risco.
               </p>
               <div className="flex flex-col items-center gap-3">
                 <BuyBtn size="xl" label="👉 Ativar meu acesso agora" />
-                <p className="text-zinc-600 text-sm">Mais de 1.200 pessoas já usam · Ativa em 2 minutos</p>
+                <p className="text-zinc-600 text-sm">Ativa em 2 minutos · Sem app · Direto no WhatsApp</p>
               </div>
             </div>
           </div>
