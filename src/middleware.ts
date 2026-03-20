@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const jwtSecret = process.env.JWT_SECRET;
-if (!jwtSecret) throw new Error("JWT_SECRET env var is required");
-const secret = new TextEncoder().encode(jwtSecret);
-
 async function isValidToken(token: string): Promise<boolean> {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) return false;
   try {
-    await jwtVerify(token, secret);
+    await jwtVerify(token, new TextEncoder().encode(jwtSecret));
     return true;
   } catch {
     return false;
