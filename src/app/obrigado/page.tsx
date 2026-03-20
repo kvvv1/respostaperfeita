@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { trackPurchase, trackLead } from "@/components/MetaPixel";
 
 function maskPhone(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -70,6 +71,8 @@ function ObrigadoContent() {
       });
 
       if (res.ok) {
+        trackPurchase(9.90);
+        trackLead();
         setSubmitted(true);
         sessionStorage.removeItem("pendingId");
         setTimeout(() => {

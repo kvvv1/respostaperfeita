@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { trackInitiateCheckout } from "@/components/MetaPixel";
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 interface Notif {
@@ -218,6 +219,7 @@ export default function LandingPage() {
 
   async function handleBuy() {
     setLoading(true);
+    trackInitiateCheckout(9.90);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
