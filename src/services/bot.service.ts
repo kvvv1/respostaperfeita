@@ -190,14 +190,23 @@ export async function handleIncomingMessage(
     ? batch[0].content.replace(/^\[imagem\]\s*/, "")
     : batch.map((m, i) => `[${i + 1}] ${m.content.replace(/^\[imagem\]\s*/, "(print)")}`).join("\n");
 
-  const promptForClaude = batch.length > 1
-    ? `O usuário encaminhou ${batch.length} mensagens em sequência para dar contexto. Analise tudo junto como uma única situação:\n\n${batchText}`
-    : batchText;
+  // Detect refinement/follow-up keywords
+  const REFINEMENT_KEYWORDS = /\b(refa[çc]a|refaz|outra op[çc][aã]o|n[aã]o gostei|muda|mude|mais formal|mais carinhosa|mais curta|mais direta|mais suave|mais agressiva|sem emoji|com emoji|tenta diferente|de novo|mais op[çc][oõ]es)\b/i;
+  const isRefinement = REFINEMENT_KEYWORDS.test(batchText);
+
+  let promptForClaude: string;
+  if (batch.length > 1) {
+    promptForClaude = `O usuário encaminhou ${batch.length} mensagens em sequência para dar contexto. Analise tudo junto como uma única situação:\n\n${batchText}`;
+  } else if (isRefinement) {
+    promptForClaude = `[MODO 2 — REFINAMENTO] O usuário quer ajustar as respostas geradas anteriormente. Pedido: "${batchText}"\n\nVolte ao histórico, identifique a situação original e regenere 3 novas opções aplicando esse ajuste. Use o formato completo (CONTEXTO, ---OPCAO1---, etc.).`;
+  } else {
+    promptForClaude = batchText;
+  }
 
   // Use imageUrl if any message in batch has one (use current if available)
   const hasImage = !!imageUrl && batch.some(m => m.id === savedMsg?.id);
 
-  // Fetch conversation history (excluding current batch)
+  // Fetch conversation history (last 10 messages for better context)
   const { data: history } = await db
     .from("Message")
     .select("direction, content")
@@ -205,7 +214,7 @@ export async function handleIncomingMessage(
     .neq("content", "[onboarding]")
     .lt("createdAt", batch[0].createdAt)
     .order("createdAt", { ascending: false })
-    .limit(6);
+    .limit(10);
 
   const formattedHistory = (history ?? [])
     .reverse()
