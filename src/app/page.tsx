@@ -531,8 +531,8 @@ export default function LandingPage() {
               {[
                 {
                   step: "1",
-                  title: "Pague R$ 9,90",
-                  desc: "Pagamento via PIX ou cartão pelo Mercado Pago. Aprovação instantânea.",
+                  title: "Escolha seu plano",
+                  desc: "A partir de R$ 9,90 — PIX ou cartão pelo Mercado Pago. Aprovação instantânea.",
                   badge: "2 min",
                 },
                 {
