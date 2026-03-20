@@ -217,6 +217,23 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
+  const [recovery, setRecovery] = useState<{ pendingId: string } | null>(null);
+
+  useEffect(() => {
+    const savedId = localStorage.getItem("pendingId");
+    if (!savedId) return;
+    fetch(`/api/phone?pendingId=${savedId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.paid && !data.phone) {
+          setRecovery({ pendingId: savedId });
+        } else if (data.phone) {
+          localStorage.removeItem("pendingId");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   async function handleBuy() {
     setLoading(true);
     trackInitiateCheckout(9.90);
@@ -228,6 +245,7 @@ export default function LandingPage() {
       });
       const data = await res.json();
       if (data.initPoint) {
+        localStorage.setItem("pendingId", data.pendingId);
         sessionStorage.setItem("pendingId", data.pendingId);
         window.location.href = data.initPoint;
       }
@@ -257,6 +275,19 @@ export default function LandingPage() {
   return (
     <>
       <LiveNotification />
+
+      {/* ── RECOVERY BANNER ───────────────────────────────────────────── */}
+      {recovery && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-green-500 text-black px-4 py-3 text-center text-sm font-bold shadow-lg">
+          ✅ Seu pagamento foi aprovado! &nbsp;
+          <a
+            href={`/obrigado?pendingId=${recovery.pendingId}`}
+            className="underline font-black"
+          >
+            Clique aqui para ativar seu acesso →
+          </a>
+        </div>
+      )}
 
       {/* ── STICKY HEADER ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-[#080808]/80 border-b border-white/5">

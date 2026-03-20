@@ -29,7 +29,10 @@ function ObrigadoContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const id = searchParams.get("pendingId") || sessionStorage.getItem("pendingId");
+    const id =
+      searchParams.get("pendingId") ||
+      sessionStorage.getItem("pendingId") ||
+      localStorage.getItem("pendingId");
     if (id) setPendingId(id);
   }, [searchParams]);
 
@@ -75,6 +78,7 @@ function ObrigadoContent() {
         trackLead();
         setSubmitted(true);
         sessionStorage.removeItem("pendingId");
+        localStorage.removeItem("pendingId");
         setTimeout(() => {
           router.push(`/upsell?phone=${encodeURIComponent(phone)}`);
         }, 2000);
