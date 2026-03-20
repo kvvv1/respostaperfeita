@@ -99,7 +99,11 @@ export function parseClaudeResponse(text: string): ParsedResponse | null {
 
 async function fetchImageBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
   try {
-    const res = await fetch(url);
+    const headers: Record<string, string> = {};
+    if (process.env.ZAPI_CLIENT_TOKEN) {
+      headers["Client-Token"] = process.env.ZAPI_CLIENT_TOKEN;
+    }
+    const res = await fetch(url, { headers });
     if (!res.ok) return null;
     const buffer = await res.arrayBuffer();
     const data = Buffer.from(buffer).toString("base64");
@@ -134,8 +138,8 @@ export async function generateResponse(
         {
           type: "text",
           text: userMessage
-            ? `${userMessage}\n\n[O usuário enviou um print de conversa acima. Analise e gere as 3 respostas.]`
-            : "[O usuário enviou um print de conversa. Analise o contexto completo e gere as 3 melhores respostas para ele usar.]",
+            ? `${userMessage}\n\n[O usuário enviou um print de conversa de WhatsApp. Analise a imagem: identifique quem mandou, o tom emocional, o que está acontecendo na conversa, e gere as 3 melhores respostas prontas para copiar.]`
+            : "[O usuário enviou um print de conversa de WhatsApp. Analise a imagem: identifique quem mandou, o tom emocional, o que está acontecendo na conversa, e gere as 3 melhores respostas prontas para copiar.]",
         },
       ];
     } else {

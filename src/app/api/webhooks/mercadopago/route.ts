@@ -3,6 +3,7 @@ import { getPaymentById, validateWebhookSignature, PlanType } from "@/lib/mercad
 import { db } from "@/lib/supabase";
 import { findOrCreateUser, activateSubscription } from "@/services/user.service";
 import { sendWelcomeMessage } from "@/services/notification.service";
+import { sendCapiEvent } from "@/lib/meta-capi";
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
@@ -108,6 +109,13 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error("Welcome message failed:", err);
     }
+
+    sendCapiEvent("Purchase", {
+      phone,
+      value: mpData.transaction_amount ?? undefined,
+      currency: "BRL",
+      eventId: mpPaymentId,
+    }).catch((err) => console.error("CAPI Purchase failed:", err));
 
     return NextResponse.json({ ok: true });
   } catch (err) {

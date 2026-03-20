@@ -75,84 +75,203 @@ const FAQS = [
   },
 ];
 
-/* ── Chat Demo ─────────────────────────────────────────────────────────── */
-const CHAT_STEPS = [
-  { from: "them", text: "oi, sumiu né? rsrs" },
-  { from: "me",   text: "mandei pro bot ↗️" },
-  { from: "bot",  text: "✅ Opção 1 (casual):\nhaha tava aqui só na minha, mas agora apareci 😄\n\n✅ Opção 2 (direto):\nrs é verdade! agora tô aqui 😅 tudo bem?" },
-  { from: "them", text: "haha oi! tudo ótimo 😍" },
-];
-
-function ChatDemo() {
-  const [visible, setVisible] = useState(0);
+/* ── WhatsApp Demo ──────────────────────────────────────────────────────── */
+function WhatsAppDemo() {
+  const [phase, setPhase] = useState<0 | 1 | 2>(0);
+  const [step, setStep]   = useState(0);
+  const [typing, setTyping] = useState(false);
+  const [tick, setTick]   = useState(0);
 
   useEffect(() => {
-    if (visible >= CHAT_STEPS.length) return;
-    const t = setTimeout(() => setVisible((v) => v + 1), visible === 0 ? 600 : 1400);
-    return () => clearTimeout(t);
-  }, [visible]);
+    const ids: ReturnType<typeof setTimeout>[] = [];
+    const t = (ms: number, fn: () => void) => ids.push(setTimeout(fn, ms));
+
+    setPhase(0); setStep(0); setTyping(false);
+    t(900,  () => setStep(1));
+    t(3200, () => { setPhase(1); setStep(0); setTyping(false); });
+    t(3800, () => setStep(1));
+    t(5200, () => setTyping(true));
+    t(7200, () => { setTyping(false); setStep(2); });
+    t(11500,() => { setPhase(2); setStep(1); });
+    t(12400,() => setStep(2));
+    t(14200,() => setStep(3));
+
+    return () => ids.forEach(clearTimeout);
+  }, [tick]);
 
   useEffect(() => {
-    const restart = setInterval(() => setVisible(0), 12000);
-    return () => clearInterval(restart);
+    const id = setInterval(() => setTick(k => k + 1), 17000);
+    return () => clearInterval(id);
   }, []);
 
-  return (
-    <div className="w-full max-w-sm rounded-2xl overflow-hidden border border-white/10 bg-[var(--bg-card)] shadow-2xl mx-auto">
-      {/* WA header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-[#1a2a1a] border-b border-white/5">
-        <div className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center font-black text-black text-sm flex-shrink-0">
-          RP
+  const Recv = ({ text, time }: { text: string; time: string }) => (
+    <div className="flex justify-start animate-[fadeIn_0.25s_ease-out]">
+      <div className="relative max-w-[82%] bg-[#202C33] rounded-[10px] rounded-tl-[2px] px-3 py-[6px] shadow-sm">
+        <div className="absolute -left-[6px] top-0 w-0 h-0 border-t-[7px] border-t-[#202C33] border-l-[7px] border-l-transparent" />
+        <p className="text-[#E9EDEF] text-[13px] leading-snug whitespace-pre-line">{text}</p>
+        <p className="text-[#8696A0] text-[10px] text-right mt-[3px]">{time}</p>
+      </div>
+    </div>
+  );
+
+  const Sent = ({ text, time, read }: { text: string; time: string; read: boolean }) => (
+    <div className="flex justify-end animate-[fadeIn_0.25s_ease-out]">
+      <div className="relative max-w-[82%] bg-[#005C4B] rounded-[10px] rounded-tr-[2px] px-3 py-[6px] shadow-sm">
+        <div className="absolute -right-[6px] top-0 w-0 h-0 border-t-[7px] border-t-[#005C4B] border-r-[7px] border-r-transparent" />
+        <p className="text-[#E9EDEF] text-[13px] leading-snug whitespace-pre-line">{text}</p>
+        <div className="flex items-center justify-end gap-1 mt-[3px]">
+          <span className="text-[#8696A0] text-[10px]">{time}</span>
+          <svg className={`w-4 h-[9px] ${read ? "text-[#53BDEB]" : "text-[#8696A0]"}`} viewBox="0 0 16 11" fill="currentColor">
+            <path d="M11.071.653a.75.75 0 0 1 .976 1.138l-6.5 6a.75.75 0 0 1-1.076-.093l-2.5-3a.75.75 0 1 1 1.158-.964L5.292 6.7l5.779-6.047zm3 0a.75.75 0 0 1 .976 1.138l-6.5 6a.75.75 0 0 1-.961.046L9.5 6.42l.74-.848.617.538 5.214-5.457z"/>
+          </svg>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold leading-none">Resposta Perfeita Bot</p>
-          <p className="text-[11px] text-green-400 mt-0.5 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block blink" />
-            online agora
-          </p>
+      </div>
+    </div>
+  );
+
+  const Dots = () => (
+    <div className="flex justify-start animate-[fadeIn_0.25s_ease-out]">
+      <div className="bg-[#202C33] rounded-[10px] rounded-tl-[2px] px-3 py-3">
+        <span className="flex gap-[5px] items-center">
+          {[0,1,2].map(d => (
+            <span key={d} className="w-[7px] h-[7px] bg-[#8696A0] rounded-full animate-bounce" style={{ animationDelay: `${d * 200}ms` }} />
+          ))}
+        </span>
+      </div>
+    </div>
+  );
+
+  const isBot = phase === 1;
+  const headerName     = isBot ? "Resposta Perfeita" : "Ana 💚";
+  const headerAvatar   = isBot ? "RP" : "A";
+  const headerSub      = isBot
+    ? (typing ? "digitando..." : "online agora")
+    : (phase === 2 && step >= 2 ? "online" : "visto por último hoje");
+  const headerSubColor = (isBot && typing) || (phase === 2 && step >= 2) ? "text-[#00A884]" : "text-[#8696A0]";
+  const avatarBg       = isBot ? "bg-green-600" : "bg-[#D63384]";
+
+  return (
+    <div className="w-full max-w-[285px] mx-auto select-none">
+      {/* Phone shell */}
+      <div
+        className="rounded-[2.2rem] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.85)]"
+        style={{ border: "6px solid #111", background: "#0B141A", height: 510 }}
+      >
+        {/* Status bar */}
+        <div className="flex justify-between items-center px-5 pt-[6px] pb-[2px] bg-[#0B141A]">
+          <span className="text-white text-[11px] font-semibold">9:41</span>
+          <div className="flex items-center gap-[5px]">
+            {/* Signal */}
+            <svg className="w-[14px] h-[10px] text-white" fill="currentColor" viewBox="0 0 18 12">
+              <rect x="0"  y="8" width="3" height="4" rx="0.5"/>
+              <rect x="5"  y="5.5" width="3" height="6.5" rx="0.5"/>
+              <rect x="10" y="3" width="3" height="9" rx="0.5"/>
+              <rect x="15" y="0" width="3" height="12" rx="0.5" opacity="0.3"/>
+            </svg>
+            {/* Wifi */}
+            <svg className="w-[14px] h-[10px] text-white" fill="currentColor" viewBox="0 0 24 17">
+              <path d="M12 3C7.95 3 4.21 4.34 1.2 6.6L0 5.1A15.85 15.85 0 0 1 12 1a15.85 15.85 0 0 1 12 4.1L22.8 6.6A13 13 0 0 0 12 3z" opacity="0.4"/>
+              <path d="M12 7.5c-2.76 0-5.26 1.12-7.09 2.93L3.64 9.16A11.1 11.1 0 0 1 12 6a11.1 11.1 0 0 1 8.36 3.16l-1.27 1.27A9.1 9.1 0 0 0 12 7.5z" opacity="0.7"/>
+              <path d="M12 12a5.5 5.5 0 0 0-3.9 1.62L6.82 12.34A7.56 7.56 0 0 1 12 10.5a7.56 7.56 0 0 1 5.18 1.84l-1.28 1.28A5.5 5.5 0 0 0 12 12z"/>
+              <circle cx="12" cy="16" r="2"/>
+            </svg>
+            {/* Battery */}
+            <div className="flex items-center gap-[1px]">
+              <div className="border border-white/80 rounded-[2px] w-[19px] h-[10px] p-[1.5px]">
+                <div className="bg-white rounded-[1px] h-full w-[80%]"/>
+              </div>
+              <div className="w-[2px] h-[5px] bg-white/60 rounded-full"/>
+            </div>
+          </div>
+        </div>
+
+        {/* WhatsApp header */}
+        <div className="bg-[#202C33] flex items-center gap-2 px-2 py-[9px]">
+          <svg className="w-[22px] h-[22px] text-[#AEBAC1] flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+          </svg>
+          <div className={`w-[34px] h-[34px] rounded-full ${avatarBg} flex items-center justify-center text-[10px] font-black text-white flex-shrink-0 transition-colors duration-500`}>
+            {headerAvatar}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[#E9EDEF] text-[13px] font-medium leading-none truncate">{headerName}</p>
+            <p className={`text-[11px] mt-[3px] transition-colors duration-300 ${headerSubColor}`}>{headerSub}</p>
+          </div>
+          <div className="flex items-center gap-[14px] text-[#AEBAC1] pr-1">
+            <svg className="w-[20px] h-[20px]" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+            </svg>
+            <svg className="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/>
+            </svg>
+          </div>
+        </div>
+
+        {/* Chat area */}
+        <div
+          className="px-2 py-2 space-y-[6px] overflow-hidden"
+          style={{
+            height: 360,
+            backgroundColor: "#0B141A",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='48' height='48' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 48 48 0M-6 6 6-6M42 54 54 42' stroke='%23ffffff' stroke-width='0.4' stroke-opacity='0.025'/%3E%3C/svg%3E")`,
+          }}
+        >
+          <div className="flex justify-center mb-1">
+            <span className="bg-[#182229]/90 text-[#8696A0] text-[10px] px-3 py-[3px] rounded-full">Hoje</span>
+          </div>
+
+          {phase === 0 && (
+            <>
+              {step >= 1 && <Recv text="oi, sumiu né? rsrs 😅" time="10:22" />}
+            </>
+          )}
+
+          {phase === 1 && (
+            <>
+              {step >= 1 && <Sent text="oi, sumiu né? rsrs 😅" time="10:23" read={false} />}
+              {typing && <Dots />}
+              {step >= 2 && (
+                <Recv
+                  text={"✅ Opção 1:\nhaha tava aqui só na minha, mas agora apareci 😄\n\n✅ Opção 2:\nrs verdade! tô aqui agora 😅 tudo bem?"}
+                  time="10:23"
+                />
+              )}
+            </>
+          )}
+
+          {phase === 2 && (
+            <>
+              {step >= 1 && <Recv text="oi, sumiu né? rsrs 😅" time="10:22" />}
+              {step >= 2 && <Sent text="haha tava aqui só na minha, mas agora apareci 😄" time="10:25" read={true} />}
+              {step >= 3 && <Recv text="haha oi! tudo ótimo 😍" time="10:25" />}
+            </>
+          )}
+        </div>
+
+        {/* Input bar */}
+        <div className="bg-[#0B141A] flex items-center gap-[6px] px-2 py-[7px]">
+          <div className="flex-1 bg-[#2A3942] rounded-full flex items-center gap-2 px-3 py-[7px]">
+            <svg className="w-[18px] h-[18px] text-[#8696A0] flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L12 15.45 7.77 18l1.12-4.81-3.73-3.23 4.92-.42L12 5l1.92 4.53 4.92.42-3.73 3.23L16.23 18z"/>
+            </svg>
+            <span className="text-[#8696A0] text-[13px]">Mensagem</span>
+          </div>
+          <div className="w-[38px] h-[38px] bg-[#00A884] rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-[18px] h-[18px] text-white ml-[2px]" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </div>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="p-4 space-y-3 min-h-[200px] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzIyMjIyMiIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')]">
-        {CHAT_STEPS.slice(0, visible).map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.from === "me" || msg.from === "bot" ? "justify-end" : "justify-start"} animate-[fadeIn_0.3s_ease-out]`}
-          >
-            <div
-              className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-snug whitespace-pre-line ${
-                msg.from === "them"
-                  ? "bg-[#2a2a2a] text-zinc-300 rounded-tl-none"
-                  : msg.from === "me"
-                  ? "bg-zinc-700 text-zinc-300 rounded-tr-none"
-                  : "bg-green-600/90 text-white rounded-tr-none"
-              }`}
-            >
-              {msg.from === "bot" && (
-                <span className="block text-[10px] text-green-200 font-semibold mb-1 uppercase tracking-wide">
-                  IA sugeriu:
-                </span>
-              )}
-              {msg.text}
-            </div>
+      {/* Scene labels */}
+      <div className="flex justify-center gap-4 mt-3">
+        {(["ficou travado 😬", "usou o bot ✨", "ela respondeu 😍"] as const).map((label, i) => (
+          <div key={i} className={`flex items-center gap-1 text-[11px] transition-all duration-500 ${phase === i ? "text-green-400" : "text-zinc-700"}`}>
+            <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${phase === i ? "bg-green-400" : "bg-zinc-700"}`} />
+            <span className="hidden sm:inline">{label}</span>
           </div>
         ))}
-        {visible < CHAT_STEPS.length && (
-          <div className="flex justify-start">
-            <div className="bg-[#2a2a2a] rounded-2xl rounded-tl-none px-4 py-2.5">
-              <span className="flex gap-1 items-center">
-                {[0, 1, 2].map((d) => (
-                  <span
-                    key={d}
-                    className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
-                    style={{ animationDelay: `${d * 150}ms` }}
-                  />
-                ))}
-              </span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -214,7 +333,7 @@ function Stars({ n }: { n: number }) {
 
 /* ── Main Page ─────────────────────────────────────────────────────────── */
 export default function LandingPage() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const [recovery, setRecovery] = useState<{ pendingId: string } | null>(null);
@@ -234,14 +353,14 @@ export default function LandingPage() {
       .catch(() => {});
   }, []);
 
-  async function handleBuy() {
-    setLoading(true);
-    trackInitiateCheckout(9.90);
+  async function handleBuy(plan: string = "TRIAL_24H", price: number = 9.90) {
+    setLoading(plan);
+    trackInitiateCheckout(price);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "TRIAL_24H" }),
+        body: JSON.stringify({ plan }),
       });
       const data = await res.json();
       if (data.initPoint) {
@@ -252,14 +371,14 @@ export default function LandingPage() {
     } catch {
       alert("Erro ao iniciar pagamento. Tente novamente.");
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   }
 
-  const BuyBtn = ({ size = "lg", label }: { size?: "lg" | "xl"; label?: string }) => (
+  const BuyBtn = ({ size = "lg", label, plan = "TRIAL_24H", price = 9.90 }: { size?: "lg" | "xl"; label?: string; plan?: string; price?: number }) => (
     <button
-      onClick={handleBuy}
-      disabled={loading}
+      onClick={() => handleBuy(plan, price)}
+      disabled={!!loading}
       className={`btn-pulse relative overflow-hidden bg-green-500 hover:bg-green-400 active:scale-[0.98] text-black font-black rounded-2xl transition-all duration-200 disabled:opacity-60 w-full ${
         size === "xl"
           ? "text-xl px-10 py-5 max-w-sm"
@@ -267,7 +386,7 @@ export default function LandingPage() {
       }`}
     >
       <span className="relative z-10">
-        {loading ? "Aguardando..." : (label ?? "👉 Ativar acesso — R$ 9,90")}
+        {loading === plan ? "Aguardando..." : (label ?? "👉 Ativar acesso — R$ 9,90")}
       </span>
     </button>
   );
@@ -296,8 +415,8 @@ export default function LandingPage() {
             Resposta<span className="text-green-400">Perfeita</span>
           </span>
           <button
-            onClick={handleBuy}
-            disabled={loading}
+            onClick={() => handleBuy()}
+            disabled={!!loading}
             className="bg-green-500 hover:bg-green-400 text-black font-bold text-sm px-4 py-2 rounded-xl transition-all duration-200 hidden sm:block"
           >
             {loading ? "..." : "Ativar por R$ 9,90"}
@@ -333,9 +452,9 @@ export default function LandingPage() {
               em segundos — pra paquera, trabalho ou conflito.
             </p>
 
-            {/* Chat Demo */}
+            {/* WhatsApp Demo */}
             <div className="mb-10 float fade-up-delay2">
-              <ChatDemo />
+              <WhatsAppDemo />
             </div>
 
             {/* CTA */}
@@ -551,56 +670,106 @@ export default function LandingPage() {
         </section>
 
         {/* ── OFERTA / PRICING ──────────────────────────────────────────── */}
-        <section className="max-w-3xl mx-auto px-4 py-20 text-center">
+        <section className="max-w-4xl mx-auto px-4 py-20 text-center">
           <p className="text-sm font-semibold text-green-400 uppercase tracking-widest mb-3">Preço</p>
           <h2 className="text-3xl sm:text-4xl font-black mb-2">
             Comece agora sem risco
           </h2>
-          <p className="text-zinc-400 mb-12">24 horas pra testar tudo. Se gostar, renova com desconto.</p>
+          <p className="text-zinc-400 mb-4">Escolha o plano ideal. Cancele quando quiser.</p>
 
-          {/* Price card */}
-          <div className="glow-card bg-[var(--bg-card)] rounded-3xl p-8 max-w-sm mx-auto mb-8">
-            <p className="text-zinc-400 text-sm mb-1">Acesso Trial</p>
-            <div className="flex items-end justify-center gap-1 mb-1">
-              <span className="text-2xl font-bold text-zinc-500">R$</span>
-              <span className="text-7xl font-black text-white leading-none">9</span>
-              <span className="text-4xl font-black text-white leading-none mb-1">,90</span>
-            </div>
-            <p className="text-zinc-500 text-sm mb-6">por 24 horas completas</p>
-
-            <ul className="space-y-3 text-left mb-8">
-              {[
-                "Respostas prontas para qualquer situação",
-                "Paquera, trabalho, conflito — tudo cobre",
-                "Histórico da conversa inteligente",
-                "2-3 opções de resposta por mensagem",
-                "Ativação em menos de 2 minutos",
-                "Sem assinatura, sem fidelidade",
-              ].map((b, i) => (
-                <li key={i} className="flex items-center gap-3 text-sm text-zinc-300">
-                  <svg className="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                  {b}
-                </li>
-              ))}
-            </ul>
-
-            <BuyBtn size="xl" />
-
-            <p className="text-zinc-600 text-xs mt-4 flex items-center justify-center gap-1.5">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              Pagamento seguro · PIX liberado na hora
-            </p>
+          {/* Mês do Consumidor badge */}
+          <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 py-1.5 text-yellow-400 text-sm font-semibold mb-10">
+            🎉 Mês do Consumidor — descontos especiais ativos
           </div>
+
+          <div className="grid sm:grid-cols-3 gap-5 mb-10">
+
+            {/* 24h */}
+            <div className="glow-card bg-[var(--bg-card)] rounded-3xl p-6 flex flex-col">
+              <p className="text-zinc-400 text-sm mb-1">Acesso Trial</p>
+              <p className="text-zinc-600 text-sm line-through mb-0.5">R$ 19,90</p>
+              <div className="flex items-end justify-center gap-1 mb-1">
+                <span className="text-xl font-bold text-zinc-500">R$</span>
+                <span className="text-5xl font-black text-white leading-none">9</span>
+                <span className="text-2xl font-black text-white leading-none mb-1">,90</span>
+              </div>
+              <p className="text-zinc-500 text-xs mb-5">por 24 horas completas</p>
+              <ul className="space-y-2 text-left mb-6 flex-1">
+                {["Respostas em segundos", "Paquera, trabalho e conflito", "2-3 opções por mensagem", "Ativação em 2 minutos"].map((b, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-zinc-300">
+                    <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {b}
+                  </li>
+                ))}
+              </ul>
+              <BuyBtn size="lg" label="Ativar por R$ 9,90" plan="TRIAL_24H" price={9.90} />
+            </div>
+
+            {/* 7 dias */}
+            <div className="glow-card bg-[var(--bg-card)] rounded-3xl p-6 flex flex-col">
+              <p className="text-zinc-400 text-sm mb-1">Acesso 7 dias</p>
+              <p className="text-zinc-600 text-sm line-through mb-0.5">R$ 34,90</p>
+              <div className="flex items-end justify-center gap-1 mb-1">
+                <span className="text-xl font-bold text-zinc-500">R$</span>
+                <span className="text-5xl font-black text-white leading-none">19</span>
+                <span className="text-2xl font-black text-white leading-none mb-1">,90</span>
+              </div>
+              <p className="text-zinc-500 text-xs mb-5">R$ 2,84 por dia</p>
+              <ul className="space-y-2 text-left mb-6 flex-1">
+                {["Tudo do trial", "7 dias de acesso completo", "Histórico de conversas", "Ideal pra testar no dia a dia"].map((b, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-zinc-300">
+                    <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {b}
+                  </li>
+                ))}
+              </ul>
+              <BuyBtn size="lg" label="Ativar por R$ 19,90" plan="WEEK_7D" price={19.90} />
+            </div>
+
+            {/* 30 dias — destaque */}
+            <div className="glow-card bg-[var(--bg-card)] rounded-3xl p-6 flex flex-col relative border border-green-500/40 ring-1 ring-green-500/20">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-green-500 text-black text-xs font-black px-4 py-1 rounded-full whitespace-nowrap">
+                ✅ Melhor custo-benefício
+              </div>
+              <p className="text-zinc-400 text-sm mb-1 mt-2">Acesso 30 dias</p>
+              <p className="text-zinc-600 text-sm line-through mb-0.5">R$ 69,90</p>
+              <div className="flex items-end justify-center gap-1 mb-1">
+                <span className="text-xl font-bold text-zinc-500">R$</span>
+                <span className="text-5xl font-black text-white leading-none">39</span>
+                <span className="text-2xl font-black text-white leading-none mb-1">,90</span>
+              </div>
+              <p className="text-green-400 text-xs font-semibold mb-5">apenas R$ 1,33 por dia</p>
+              <ul className="space-y-2 text-left mb-6 flex-1">
+                {["Tudo do trial e 7 dias", "30 dias de acesso total", "Histórico completo", "Menor custo por dia", "Sem renovação no mês"].map((b, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-zinc-300">
+                    <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {b}
+                  </li>
+                ))}
+              </ul>
+              <BuyBtn size="lg" label="Ativar por R$ 39,90" plan="MONTH_30D" price={39.90} />
+            </div>
+
+          </div>
+
+          <p className="text-zinc-600 text-xs mb-8 flex items-center justify-center gap-1.5">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            Pagamento seguro via Mercado Pago · PIX ou cartão · Ativa em 2 minutos
+          </p>
 
           {/* Guarantee */}
           <div className="inline-flex items-center gap-3 bg-green-500/5 border border-green-500/20 rounded-2xl px-6 py-4 text-sm text-zinc-400 max-w-xs mx-auto">
             <span className="text-2xl">🛡️</span>
             <span>
-              Se não funcionar na <strong className="text-white">primeira resposta</strong>, resolve direto com a gente.
+              Se a IA não te ajudar na <strong className="text-white">primeira mensagem</strong>, devolvemos seu dinheiro. Sem burocracia.
             </span>
           </div>
         </section>
@@ -670,14 +839,19 @@ export default function LandingPage() {
           </p>
           <p>© {new Date().getFullYear()} Resposta Perfeita. Todos os direitos reservados.</p>
           <p className="mt-1">Produto digital — sem garantia de resultado específico.</p>
+          <p className="mt-2">
+            <a href="/politica-de-privacidade" className="hover:text-zinc-400 underline">
+              Política de Privacidade
+            </a>
+          </p>
         </footer>
       </main>
 
       {/* ── MOBILE STICKY CTA ─────────────────────────────────────────── */}
       <div className="sm:hidden fixed bottom-0 inset-x-0 z-50 p-3 bg-[#080808]/90 backdrop-blur-md border-t border-white/5">
         <button
-          onClick={handleBuy}
-          disabled={loading}
+          onClick={() => handleBuy()}
+          disabled={!!loading}
           className="btn-pulse w-full bg-green-500 hover:bg-green-400 text-black font-black text-base py-3.5 rounded-2xl transition-all duration-200 disabled:opacity-60"
         >
           {loading ? "Aguardando..." : "👉 Ativar agora — R$ 9,90"}

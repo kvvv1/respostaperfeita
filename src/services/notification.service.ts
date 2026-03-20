@@ -1,21 +1,23 @@
 import { db } from "@/lib/supabase";
 import { buildUpsellLink } from "@/lib/whatsapp";
 import { sendTextMessage } from "@/lib/zapi";
+import { sendOnboarding } from "@/services/bot.service";
+import { getUserByPhone } from "@/services/user.service";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
 
-export async function sendWelcomeMessage(phone: string, plan: string) {
-  const planNames: Record<string, string> = {
-    TRIAL_24H: "24 horas",
-    WEEK_7D: "7 dias",
-    MONTH_30D: "30 dias",
-  };
-  const duration = planNames[plan] || "acesso";
+export async function sendWelcomeMessage(phone: string, _plan: string) {
+  await sendOnboarding(phone);
 
-  await sendTextMessage(
-    phone,
-    `Acesso ativado com sucesso!\n\nSeu plano: ${duration}\n\nMe manda a mensagem ou descreva a situacao que eu te ajudo a responder do jeito certo.\n\nDica: pode colar aqui a mensagem exata que voce recebeu.`
-  );
+  // Mark onboarding as sent so bot.service doesn't send it again on first message
+  const user = await getUserByPhone(phone);
+  if (user) {
+    await db.from("Message").insert({
+      userId: user.id,
+      direction: "OUTBOUND",
+      content: "[onboarding]",
+    });
+  }
 }
 
 export async function checkExpiringSubscriptions() {

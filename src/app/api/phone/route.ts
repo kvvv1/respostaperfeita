@@ -4,6 +4,7 @@ import { formatPhone } from "@/lib/utils";
 import { findOrCreateUser, activateSubscription } from "@/services/user.service";
 import { sendWelcomeMessage } from "@/services/notification.service";
 import { PlanType } from "@/lib/mercadopago";
+import { sendCapiEvent } from "@/lib/meta-capi";
 import { z } from "zod";
 
 const schema = z.object({
@@ -59,6 +60,10 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         console.error("Welcome message failed:", err);
       }
+
+      sendCapiEvent("Lead", { phone: formattedPhone, eventId: pendingId }).catch(
+        (err) => console.error("CAPI Lead failed:", err)
+      );
 
       return NextResponse.json({ success: true, activated: true, phone: formattedPhone });
     }

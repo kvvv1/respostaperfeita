@@ -29,7 +29,7 @@ async function isFirstMessage(userId: string): Promise<boolean> {
   return (count ?? 0) === 0;
 }
 
-async function sendOnboarding(phone: string) {
+export async function sendOnboarding(phone: string) {
   await sendSequence(phone, [
     `🎉 *Bem-vindo ao Resposta Perfeita!*\n\nSeu acesso está ativo. Sou seu parceiro de comunicação — vou te ajudar a arrasar em qualquer conversa no WhatsApp.`,
     `*Como funcionar comigo é simples:*\n\n📩 Cole aqui a mensagem que você recebeu\nEu identifico o contexto automaticamente e te mando *3 respostas prontas* para copiar e enviar`,
@@ -37,6 +37,29 @@ async function sendOnboarding(phone: string) {
     `Além de gerar respostas, você pode:\n\n🧠 Me pedir *conselhos* sobre situações\n💬 Me perguntar *como agir* numa conversa\n📸 Mandar um *print* e eu analiso tudo\n📨 Encaminhar *várias mensagens seguidas* para dar contexto — eu leio tudo junto!\n🔄 Pedir para *refazer* qualquer resposta`,
     `*Qual é a primeira mensagem que você quer responder?* 👇`,
   ]);
+}
+
+async function checkRateLimit(userId: string): Promise<{ allowed: boolean; reason?: string }> {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const oneDayAgo  = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { count: hourCount } = await db
+    .from("Message")
+    .select("id", { count: "exact", head: true })
+    .eq("userId", userId)
+    .eq("direction", "OUTBOUND")
+    .gt("createdAt", oneHourAgo);
+
+  const { count: dayCount } = await db
+    .from("Message")
+    .select("id", { count: "exact", head: true })
+    .eq("userId", userId)
+    .eq("direction", "OUTBOUND")
+    .gt("createdAt", oneDayAgo);
+
+  if ((hourCount ?? 0) >= 60) return { allowed: false, reason: "hour" };
+  if ((dayCount ?? 0) >= 300) return { allowed: false, reason: "day" };
+  return { allowed: true };
 }
 
 export async function handleIncomingMessage(
@@ -149,6 +172,16 @@ export async function handleIncomingMessage(
   }
 
   console.log(`[BOT] Processing batch of ${batch.length} message(s)`);
+
+  // Rate limiting
+  const rateCheck = await checkRateLimit(user.id);
+  if (!rateCheck.allowed) {
+    const msg = rateCheck.reason === "hour"
+      ? "Você atingiu o limite de mensagens por hora. Aguarde alguns minutos antes de continuar. 🙏"
+      : "Você atingiu o limite diário de mensagens. Volte amanhã para continuar. 🙏";
+    await sendTextMessage(formattedPhone, msg);
+    return;
+  }
 
   // Build combined prompt for Claude
   const batchText = batch.length === 1
