@@ -9,6 +9,7 @@ import {
 } from "@/services/user.service";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.respostaperfeita.com";
+const DEBOUNCE_MS = 4000; // wait 4s to collect batch of messages
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -31,14 +32,10 @@ async function isFirstMessage(userId: string): Promise<boolean> {
 async function sendOnboarding(phone: string) {
   await sendSequence(phone, [
     `🎉 *Bem-vindo ao Resposta Perfeita!*\n\nSeu acesso está ativo. Sou seu parceiro de comunicação — vou te ajudar a arrasar em qualquer conversa no WhatsApp.`,
-
     `*Como funcionar comigo é simples:*\n\n📩 Cole aqui a mensagem que você recebeu\nEu identifico o contexto automaticamente e te mando *3 respostas prontas* para copiar e enviar`,
-
     `*Exemplos do que você pode mandar:*\n\n💘 _"oi sumida, tava com saudade"_ — de um crush\n💼 _"preciso de você amanhã cedo"_ — do chefe\n😤 _"precisamos conversar"_ — do namorado(a)\n💰 _"qual o melhor preço que você faz?"_ — de um cliente\n👥 _"você sumiu, cadê você?"_ — de um amigo`,
-
-    `Além de gerar respostas, você pode:\n\n🧠 Me pedir *conselhos* sobre situações\n💬 Me perguntar *como agir* numa conversa\n📸 Me descrever um *print* e eu te ajudo\n🔄 Pedir para *refazer* qualquer resposta\n\nQuanto menos você precisar explicar, mais rápido eu te ajudo — pode mandar direto!`,
-
-    `*Qual é a primeira mensagem que você quer responder?* 👇\n\nCola aqui e a gente começa!`,
+    `Além de gerar respostas, você pode:\n\n🧠 Me pedir *conselhos* sobre situações\n💬 Me perguntar *como agir* numa conversa\n📸 Mandar um *print* e eu analiso tudo\n📨 Encaminhar *várias mensagens seguidas* para dar contexto — eu leio tudo junto!\n🔄 Pedir para *refazer* qualquer resposta`,
+    `*Qual é a primeira mensagem que você quer responder?* 👇`,
   ]);
 }
 
@@ -60,7 +57,7 @@ export async function handleIncomingMessage(
       .eq("zapiMessageId", zapiMessageId)
       .single();
     if (existing) {
-      console.log(`[BOT] Duplicate message ${zapiMessageId}, skipping`);
+      console.log(`[BOT] Duplicate ${zapiMessageId}, skipping`);
       return;
     }
   }
@@ -68,49 +65,44 @@ export async function handleIncomingMessage(
   const user = await getUserByPhone(formattedPhone);
 
   if (!user) {
-    console.log(`[BOT] No user found for ${formattedPhone}, sending activation message`);
     await sendTextMessage(
       formattedPhone,
-      `Oi! 👋 Para usar o *Resposta Perfeita*, você precisa ativar seu acesso primeiro.\n\nAcesse aqui: ${APP_URL}`
+      `Oi! 👋 Para usar o *Resposta Perfeita*, ative seu acesso primeiro:\n\n${APP_URL}`
     );
     return;
   }
-
-  console.log(`[BOT] User found: ${user.id}`);
 
   const activeSub = await getActiveSubscription(user.id);
 
   if (!activeSub) {
-    console.log(`[BOT] No active subscription for user ${user.id}`);
     const upsellLink = buildUpsellLink(APP_URL, formattedPhone);
     await sendTextMessage(
       formattedPhone,
-      `Seu acesso expirou. 😕\n\nMas calma — você pode reativar agora e continuar usando:\n\n${upsellLink}`
+      `Seu acesso expirou. 😕\n\nReative agora e continue:\n\n${upsellLink}`
     );
     return;
   }
 
-  console.log(`[BOT] Active subscription found, expires: ${activeSub.expiresAt}`);
-
   // Save inbound message
   const inboundContent = imageUrl
-    ? `[imagem] ${imageCaption || messageText || "print de conversa"}`
+    ? `[imagem] ${imageCaption || messageText || "print"}`
     : messageText;
 
-  await db.from("Message").insert({
-    userId: user.id,
-    direction: "INBOUND",
-    content: inboundContent,
-    zapiMessageId: zapiMessageId ?? null,
-  });
+  const { data: savedMsg } = await db
+    .from("Message")
+    .insert({
+      userId: user.id,
+      direction: "INBOUND",
+      content: inboundContent,
+      zapiMessageId: zapiMessageId ?? null,
+    })
+    .select("id, createdAt")
+    .single();
 
-  // Check if first interaction → send onboarding
+  // Onboarding check
   const firstTime = await isFirstMessage(user.id);
   if (firstTime) {
-    console.log(`[BOT] First message for user ${user.id}, sending onboarding`);
     await sendOnboarding(formattedPhone);
-
-    // Save onboarding as outbound
     await db.from("Message").insert({
       userId: user.id,
       direction: "OUTBOUND",
@@ -119,35 +111,87 @@ export async function handleIncomingMessage(
     return;
   }
 
-  // Fetch conversation history
+  // ── DEBOUNCE: wait for more messages ───────────────────────────────────
+  await delay(DEBOUNCE_MS);
+
+  // Find timestamp of last OUTBOUND message
+  const { data: lastOut } = await db
+    .from("Message")
+    .select("createdAt")
+    .eq("userId", user.id)
+    .eq("direction", "OUTBOUND")
+    .neq("content", "[onboarding]")
+    .order("createdAt", { ascending: false })
+    .limit(1)
+    .single();
+
+  const since = lastOut?.createdAt ?? new Date(0).toISOString();
+
+  // Collect all INBOUND messages since last OUTBOUND (the batch)
+  const { data: batch } = await db
+    .from("Message")
+    .select("id, content, createdAt")
+    .eq("userId", user.id)
+    .eq("direction", "INBOUND")
+    .gt("createdAt", since)
+    .order("createdAt", { ascending: true });
+
+  if (!batch || batch.length === 0) {
+    console.log(`[BOT] Batch empty, already processed`);
+    return;
+  }
+
+  // Only process if this invocation holds the LATEST message in the batch
+  const latestId = batch[batch.length - 1].id;
+  if (savedMsg?.id !== latestId) {
+    console.log(`[BOT] Not the latest message (${savedMsg?.id} vs ${latestId}), skipping`);
+    return;
+  }
+
+  console.log(`[BOT] Processing batch of ${batch.length} message(s)`);
+
+  // Build combined prompt for Claude
+  const batchText = batch.length === 1
+    ? batch[0].content.replace(/^\[imagem\]\s*/, "")
+    : batch.map((m, i) => `[${i + 1}] ${m.content.replace(/^\[imagem\]\s*/, "(print)")}`).join("\n");
+
+  const promptForClaude = batch.length > 1
+    ? `O usuário encaminhou ${batch.length} mensagens em sequência para dar contexto. Analise tudo junto como uma única situação:\n\n${batchText}`
+    : batchText;
+
+  // Use imageUrl if any message in batch has one (use current if available)
+  const hasImage = !!imageUrl && batch.some(m => m.id === savedMsg?.id);
+
+  // Fetch conversation history (excluding current batch)
   const { data: history } = await db
     .from("Message")
     .select("direction, content")
     .eq("userId", user.id)
     .neq("content", "[onboarding]")
+    .lt("createdAt", batch[0].createdAt)
     .order("createdAt", { ascending: false })
-    .limit(7);
+    .limit(6);
 
   const formattedHistory = (history ?? [])
     .reverse()
-    .slice(0, -1)
     .map((m) => ({
       role: (m.direction === "INBOUND" ? "user" : "assistant") as "user" | "assistant",
       content: m.content,
     }));
 
-  console.log(`[BOT] Calling Claude with ${formattedHistory.length} history messages`);
-
-  // If image, notify user we're processing
-  if (imageUrl) {
+  if (hasImage) {
     await sendTextMessage(formattedPhone, "🔍 Analisando o print... um segundo!");
+  } else if (batch.length > 1) {
+    await sendTextMessage(formattedPhone, `📨 Recebi ${batch.length} mensagens — analisando tudo junto!`);
   }
 
-  const { text, outputTokens } = await generateResponse(messageText, formattedHistory, imageUrl);
+  console.log(`[BOT] Calling Claude (batch=${batch.length}, image=${hasImage})`);
+  const { text, outputTokens } = await generateResponse(
+    promptForClaude,
+    formattedHistory,
+    hasImage ? imageUrl : null
+  );
 
-  console.log(`[BOT] Claude response (${outputTokens} tokens): ${text.slice(0, 80)}`);
-
-  // Save outbound
   await db.from("Message").insert({
     userId: user.id,
     direction: "OUTBOUND",
@@ -155,7 +199,6 @@ export async function handleIncomingMessage(
     tokens: outputTokens,
   });
 
-  // Send parsed response as separate messages or fallback
   const parsed = parseClaudeResponse(text);
   if (parsed) {
     await sendTextMessage(formattedPhone, `✅ *${parsed.contexto}*`);
@@ -180,16 +223,12 @@ export async function handleIncomingMessage(
     (new Date(activeSub.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60);
 
   if (hoursLeft <= 2 && !activeSub.notified) {
-    await db
-      .from("Subscription")
-      .update({ notified: true })
-      .eq("id", activeSub.id);
-
+    await db.from("Subscription").update({ notified: true }).eq("id", activeSub.id);
     const upsellLink = buildUpsellLink(APP_URL, formattedPhone);
     setTimeout(async () => {
       await sendTextMessage(
         formattedPhone,
-        `⚠️ *Atenção: seu acesso expira em menos de 2 horas!*\n\nAinda tem conversas para resolver? Renove agora e não perde o ritmo:\n\n${upsellLink}\n\n_7 dias por R$ 19,90 · 30 dias por R$ 39,90_`
+        `⚠️ *Atenção: seu acesso expira em menos de 2 horas!*\n\nRenove agora:\n${upsellLink}\n\n_7 dias por R$ 19,90 · 30 dias por R$ 39,90_`
       );
     }, 3000);
   }
