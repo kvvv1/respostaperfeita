@@ -1,9 +1,6 @@
 import { generateResponse, parseClaudeResponse } from "@/lib/claude";
 import { db } from "@/lib/supabase";
 import { formatPhone } from "@/lib/utils";
-function renewalLink(phone: string) {
-  return `${APP_URL}/renovar?phone=${encodeURIComponent(phone)}`;
-}
 import { sendTextMessage } from "@/lib/zapi";
 import {
   getActiveSubscription,
@@ -11,6 +8,10 @@ import {
 } from "@/services/user.service";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.respostaperfeita.com";
+
+function renewalLink(phone: string) {
+  return `${APP_URL}/renovar?phone=${encodeURIComponent(phone)}`;
+}
 const DEBOUNCE_MS = 4000; // wait 4s to collect batch of messages
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
