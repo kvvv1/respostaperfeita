@@ -406,7 +406,7 @@ export default function LandingPage() {
     <button
       onClick={() => handleBuy(plan, price)}
       disabled={!!loading}
-      className={`btn-pulse relative overflow-hidden bg-green-500 hover:bg-green-400 active:scale-[0.98] text-black font-black rounded-2xl transition-all duration-200 disabled:opacity-60 w-full ${
+      className={`btn-pulse relative overflow-hidden bg-green-500 hover:bg-green-400 active:scale-[0.98] text-white font-black rounded-2xl transition-all duration-200 disabled:opacity-60 w-full ${
         size === "xl"
           ? "text-xl px-10 py-5 max-w-sm"
           : "text-lg px-8 py-4 max-w-sm"
@@ -424,7 +424,7 @@ export default function LandingPage() {
 
       {/* ── RECOVERY BANNER ───────────────────────────────────────────── */}
       {recovery && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-green-500 text-black px-4 py-3 text-center text-sm font-bold shadow-lg">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-green-500 text-white px-4 py-3 text-center text-sm font-bold shadow-lg">
           ✅ Seu pagamento foi aprovado! &nbsp;
           <a
             href={`/obrigado?pendingId=${recovery.pendingId}`}
@@ -472,7 +472,7 @@ export default function LandingPage() {
             <div className="flex flex-col items-center gap-3 fade-up-delay2">
               <button
                 onClick={() => document.getElementById("planos")?.scrollIntoView({ behavior: "smooth" })}
-                className="btn-pulse relative overflow-hidden bg-green-500 hover:bg-green-400 active:scale-[0.98] text-black font-black rounded-2xl transition-all duration-200 text-xl px-10 py-5 max-w-sm w-full"
+                className="btn-pulse relative overflow-hidden bg-green-500 hover:bg-green-400 active:scale-[0.98] text-white font-black rounded-2xl transition-all duration-200 text-xl px-10 py-5 max-w-sm w-full"
               >
                 👉 Ver planos e ativar
               </button>
@@ -557,7 +557,7 @@ export default function LandingPage() {
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-5">
                   <div className="relative flex-shrink-0">
-                    <div className="w-12 h-12 bg-green-500 text-black font-black rounded-2xl flex items-center justify-center text-xl shadow-lg shadow-green-500/25">
+                    <div className="w-12 h-12 bg-green-500 text-white font-black rounded-2xl flex items-center justify-center text-xl shadow-lg shadow-green-500/25">
                       {item.step}
                     </div>
                   </div>
@@ -717,7 +717,7 @@ export default function LandingPage() {
 
             {/* 30 dias — destaque */}
             <div className="glow-card bg-[var(--bg-card)] rounded-3xl p-6 flex flex-col relative border border-green-500/40 ring-1 ring-green-500/20">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-green-500 text-black text-xs font-black px-4 py-1 rounded-full whitespace-nowrap">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-black px-4 py-1 rounded-full whitespace-nowrap">
                 ✅ Melhor custo-benefício
               </div>
               <p className="text-zinc-400 text-sm mb-1 mt-2">Acesso 30 dias</p>
@@ -813,7 +813,7 @@ export default function LandingPage() {
               <div className="flex flex-col items-center gap-3">
                 <button
                   onClick={() => document.getElementById("planos")?.scrollIntoView({ behavior: "smooth" })}
-                  className="btn-pulse relative overflow-hidden bg-green-500 hover:bg-green-400 active:scale-[0.98] text-black font-black rounded-2xl transition-all duration-200 text-xl px-10 py-5 max-w-sm w-full"
+                  className="btn-pulse relative overflow-hidden bg-green-500 hover:bg-green-400 active:scale-[0.98] text-white font-black rounded-2xl transition-all duration-200 text-xl px-10 py-5 max-w-sm w-full"
                 >
                   👉 Escolher meu plano
                 </button>
@@ -842,7 +842,7 @@ export default function LandingPage() {
         <button
           onClick={() => handleBuy()}
           disabled={!!loading}
-          className="btn-pulse w-full bg-green-500 hover:bg-green-400 text-black font-black text-base py-3.5 rounded-2xl transition-all duration-200 disabled:opacity-60"
+          className="btn-pulse w-full bg-green-500 hover:bg-green-400 text-white font-black text-base py-3.5 rounded-2xl transition-all duration-200 disabled:opacity-60"
         >
           {loading ? "Aguardando..." : "👉 Ativar agora — R$ 9,90"}
         </button>

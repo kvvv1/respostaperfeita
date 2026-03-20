@@ -101,7 +101,7 @@ function UpsellContent() {
         <div className="space-y-4 mb-8">
           {/* 30 days — highlight FIRST */}
           <div className="bg-zinc-900 border-2 border-green-500 rounded-2xl p-6 relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-black text-xs font-black px-4 py-1 rounded-full">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-black px-4 py-1 rounded-full">
               🔥 MELHOR ESCOLHA
             </div>
             <div className="flex items-start justify-between mb-3">
@@ -133,7 +133,7 @@ function UpsellContent() {
             <button
               onClick={() => handleUpgrade("MONTH_30D")}
               disabled={loading !== null}
-              className="btn-pulse w-full bg-green-500 hover:bg-green-400 text-black font-black text-lg py-4 rounded-xl transition-all disabled:opacity-50"
+              className="btn-pulse w-full bg-green-500 hover:bg-green-400 text-white font-black text-lg py-4 rounded-xl transition-all disabled:opacity-50"
             >
               {loading === "MONTH_30D" ? "Aguarde..." : "Quero 30 dias por R$ 39,90 →"}
             </button>
