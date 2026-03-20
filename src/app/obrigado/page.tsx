@@ -28,12 +28,13 @@ function isValidPhone(phone: string) {
 }
 
 function ObrigadoContent() {
-  const [phone, setPhone]       = useState("");
-  const [loading, setLoading]   = useState(false);
+  const [phone, setPhone]         = useState("");
+  const [loading, setLoading]     = useState(false);
   const [activated, setActivated] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [plan, setPlan]         = useState<string>("TRIAL_24H");
-  const [error, setError]       = useState("");
+  const [plan, setPlan]           = useState<string>("TRIAL_24H");
+  const [error, setError]         = useState("");
+  const [autoMode, setAutoMode]   = useState(false); // renewal: phone already known
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -46,6 +47,63 @@ function ObrigadoContent() {
     const p = searchParams.get("plan");
     if (p) setPlan(p);
   }, [searchParams]);
+
+  // Auto-activate if phone is already set (renewal flow)
+  useEffect(() => {
+    if (!pendingId) return;
+    let cancelled = false;
+
+    async function tryAutoActivate() {
+      const res = await fetch(`/api/phone?pendingId=${pendingId}`).catch(() => null);
+      if (!res?.ok || cancelled) return;
+      const data = await res.json();
+
+      if (data.phone) {
+        // Phone already saved (renewal) — wait for payment then auto-activate
+        setAutoMode(true);
+        setPhone(data.phone);
+
+        if (data.paid) {
+          // Payment already confirmed — activate now
+          const activate = await fetch("/api/phone", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: data.phone, pendingId }),
+          }).catch(() => null);
+          if (activate?.ok && !cancelled) {
+            trackPurchase(PLAN_PRICES[data.plan] ?? 9.9);
+            trackLead();
+            setActivated(true);
+          }
+        } else {
+          // Poll until payment confirmed (MP webhook may be delayed)
+          const interval = setInterval(async () => {
+            if (cancelled) { clearInterval(interval); return; }
+            const r = await fetch(`/api/phone?pendingId=${pendingId}`).catch(() => null);
+            if (!r?.ok) return;
+            const d = await r.json();
+            if (d.paid) {
+              clearInterval(interval);
+              const activate = await fetch("/api/phone", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone: d.phone, pendingId }),
+              }).catch(() => null);
+              if (activate?.ok && !cancelled) {
+                trackPurchase(PLAN_PRICES[d.plan] ?? 9.9);
+                trackLead();
+                setActivated(true);
+              }
+            }
+          }, 3000);
+          return () => clearInterval(interval);
+        }
+      }
+    }
+
+    tryAutoActivate();
+    return () => { cancelled = true; };
+  }, [pendingId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -136,6 +194,19 @@ function ObrigadoContent() {
           >
             Ver planos com desconto →
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Auto mode (renovação): aguardando pagamento ── */
+  if (autoMode && !activated) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="text-5xl mb-4 animate-spin">⏳</div>
+          <h1 className="text-2xl font-black text-white mb-2">Confirmando pagamento...</h1>
+          <p className="text-zinc-400">Aguarde, estamos ativando seu acesso automaticamente.</p>
         </div>
       </div>
     );

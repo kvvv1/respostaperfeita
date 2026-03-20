@@ -4,17 +4,18 @@ import { db } from "@/lib/supabase";
 import { z } from "zod";
 
 const schema = z.object({
-  plan: z.enum(["TRIAL_24H", "WEEK_7D", "MONTH_30D"]).default("TRIAL_24H"),
+  plan:  z.enum(["TRIAL_24H", "WEEK_7D", "MONTH_30D"]).default("TRIAL_24H"),
+  phone: z.string().min(10).optional(), // pre-filled for renewals
 });
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { plan } = schema.parse(body);
+    const { plan, phone } = schema.parse(body);
 
     const { data: pending, error } = await db
       .from("PendingPhone")
-      .insert({ plan })
+      .insert({ plan, phone: phone ?? null })
       .select()
       .single();
 

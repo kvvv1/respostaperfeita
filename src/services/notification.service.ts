@@ -19,7 +19,9 @@ export async function sendWelcomeMessage(phone: string, _plan: string) {
   }
 }
 
-const RENEWAL_LINK = APP_URL; // landing page — user picks plan there
+function renewalLink(phone: string) {
+  return `${APP_URL}/renovar?phone=${encodeURIComponent(phone)}`;
+}
 
 const PLAN_LABEL: Record<string, string> = {
   TRIAL_24H: "24 horas",
@@ -52,7 +54,7 @@ export async function checkExpiringSubscriptions() {
     try {
       await sendTextMessage(
         phone,
-        `⏳ *Seu acesso de ${planLabel} expira amanhã!*\n\nVocê já usou o bot pra resolver suas conversas — imagina ter isso por 30 dias completos.\n\n🏆 *Plano recomendado: 30 dias por R$ 39,90*\nMenos de R$ 1,35 por dia. Você gasta mais num café.\n\n👇 Garanta já e nunca mais trave numa resposta:\n${RENEWAL_LINK}\n\n_Também disponível: 7 dias por R$ 19,90_`
+        `⏳ *Seu acesso de ${planLabel} expira amanhã!*\n\nVocê já usou o bot pra resolver suas conversas — imagina ter isso por 30 dias completos.\n\n🏆 *Plano recomendado: 30 dias por R$ 39,90*\nMenos de R$ 1,35 por dia. Você gasta mais num café.\n\n👇 Garanta já e nunca mais trave numa resposta:\n${renewalLink(phone)}\n\n_Também disponível: 7 dias por R$ 19,90_`
       );
       await db.from("Subscription").update({ notified24h: true }).eq("id", sub.id);
       count24h++;
@@ -77,7 +79,7 @@ export async function checkExpiringSubscriptions() {
     try {
       await sendTextMessage(
         phone,
-        `🚨 *Seu acesso expira em menos de 2 horas!*\n\nNão deixa travar agora — você já sabe como funciona.\n\n🏆 *Recomendo o plano de 30 dias por R$ 39,90*\nVale muito mais que isso no seu dia a dia.\n\n👇 Renove agora em menos de 1 minuto:\n${RENEWAL_LINK}`
+        `🚨 *Seu acesso expira em menos de 2 horas!*\n\nNão deixa travar agora — você já sabe como funciona.\n\n🏆 *Recomendo o plano de 30 dias por R$ 39,90*\nVale muito mais que isso no seu dia a dia.\n\n👇 Renove agora em menos de 1 minuto:\n${renewalLink(phone)}`
       );
       await db.from("Subscription").update({ notified: true }).eq("id", sub.id);
       count2h++;
@@ -102,7 +104,7 @@ export async function checkExpiringSubscriptions() {
       if (phone) {
         await sendTextMessage(
           phone,
-          `😕 *Seu acesso expirou.*\n\nSei que ainda tem conversas esperando resposta — acontece com todo mundo.\n\nA boa notícia: reativar leva menos de 1 minuto e você volta a usar na hora.\n\n🏆 *Melhor custo-benefício: 30 dias por R$ 39,90*\nMenos de R$ 1,35 por dia para nunca mais travar.\n\n👇 Escolha seu plano e reative agora:\n${RENEWAL_LINK}\n\n✅ 7 dias — R$ 19,90\n✅ *30 dias — R$ 39,90* ⭐ mais popular`
+          `😕 *Seu acesso expirou.*\n\nSei que ainda tem conversas esperando resposta — acontece com todo mundo.\n\nA boa notícia: reativar leva menos de 1 minuto e você volta a usar na hora.\n\n🏆 *Melhor custo-benefício: 30 dias por R$ 39,90*\nMenos de R$ 1,35 por dia para nunca mais travar.\n\n👇 Escolha seu plano e reative agora:\n${renewalLink(phone)}\n\n✅ 24h — R$ 9,90\n✅ 7 dias — R$ 19,90\n✅ *30 dias — R$ 39,90* ⭐ mais popular`
         );
       }
       expiredCount++;
